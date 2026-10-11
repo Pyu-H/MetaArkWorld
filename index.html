@@ -1,0 +1,2266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>元界方舟 MetaArk World — 单文件演示版</title>
+<style>
+/* =====================================================================
+   MetaArk World —— 全局样式
+   风格：深色 Web3 + 像素游戏质感
+   ===================================================================== */
+
+:root {
+  --bg-0: #070b14;
+  --bg-1: #0c1220;
+  --bg-2: #121a2c;
+  --bg-3: #1a2337;
+  --line: #22304d;
+  --line-soft: #1a2540;
+
+  --txt-0: #e8eefc;
+  --txt-1: #9aabc9;
+  --txt-2: #5f7093;
+
+  --ark: #ffb020;
+  --ark-dim: #7a5410;
+  --meta: #26d0ce;
+  --meta-dim: #10605f;
+  --up: #3ddc97;
+  --down: #ff5c7a;
+  --accent: #6c8cff;
+  --burn: #ff6b35;
+
+  --r: 10px;
+  --mono: 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-0);
+  color: var(--txt-0);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2e4066; }
+
+/* ---------------- 顶部导航 ---------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 24px;
+  padding: 0 24px; height: 60px;
+  background: rgba(7, 11, 20, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand-mark {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--ark), var(--meta));
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 15px; color: #06101f;
+  box-shadow: 0 0 18px rgba(255, 176, 32, 0.3);
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-text b { font-size: 15px; letter-spacing: 0.4px; }
+.brand-text span { font-size: 10px; color: var(--txt-2); letter-spacing: 1.4px; }
+
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav button {
+  padding: 7px 15px; border: none; border-radius: 7px;
+  background: transparent; color: var(--txt-1);
+  font-size: 13.5px; font-family: var(--sans);
+  cursor: pointer; transition: all 0.16s; font-weight: 500;
+}
+.nav button:hover { background: var(--bg-2); color: var(--txt-0); }
+.nav button.on { background: var(--bg-3); color: var(--txt-0); box-shadow: inset 0 0 0 1px var(--line); }
+
+.wallet {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px 6px 10px; border-radius: 9px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  cursor: pointer; transition: border-color 0.16s;
+}
+.wallet:hover { border-color: #33497a; }
+.wallet .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--up); box-shadow: 0 0 8px var(--up); }
+.wallet .addr { font-family: var(--mono); font-size: 12px; color: var(--txt-1); }
+
+/* ---------------- 币价条 ---------------- */
+.ticker {
+  display: flex; align-items: center; gap: 28px;
+  padding: 0 24px; height: 42px;
+  background: var(--bg-1); border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto; font-size: 12.5px; white-space: nowrap;
+}
+.tk { display: flex; align-items: center; gap: 8px; }
+.tk .lbl { color: var(--txt-2); }
+.tk .val { font-family: var(--mono); font-weight: 600; }
+.tk .chg { font-family: var(--mono); font-size: 11.5px; }
+.tk .chg.up { color: var(--up); }
+.tk .chg.down { color: var(--down); }
+.c-ark { color: var(--ark); }
+.c-meta { color: var(--meta); }
+
+/* ---------------- 布局 ---------------- */
+.wrap { padding: 18px 24px 40px; max-width: 1680px; margin: 0 auto; }
+.page { display: none; }
+.page.on { display: block; animation: fade 0.24s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.grid { display: grid; gap: 14px; }
+.g-2 { grid-template-columns: repeat(2, 1fr); }
+.g-3 { grid-template-columns: repeat(3, 1fr); }
+.g-4 { grid-template-columns: repeat(4, 1fr); }
+.g-map { grid-template-columns: minmax(0, 1.62fr) minmax(340px, 1fr); }
+
+@media (max-width: 1240px) {
+  .g-map, .g-4, .g-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 860px) {
+  .g-map, .g-4, .g-3, .g-2 { grid-template-columns: 1fr; }
+  .nav { overflow-x: auto; }
+}
+
+/* ---------------- 卡片 ---------------- */
+.card {
+  background: var(--bg-1); border: 1px solid var(--line-soft);
+  border-radius: var(--r); overflow: hidden;
+}
+.card-h {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--line-soft);
+}
+.card-h h3 { font-size: 13.5px; font-weight: 600; letter-spacing: 0.2px; }
+.card-h .sub { font-size: 11.5px; color: var(--txt-2); }
+.card-b { padding: 14px 16px; }
+.card-b.tight { padding: 10px 0; }
+
+/* ---------------- 统计块 ---------------- */
+.stat { padding: 15px 16px; background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: var(--r); }
+.stat .k { font-size: 11.5px; color: var(--txt-2); margin-bottom: 7px; letter-spacing: 0.3px; }
+.stat .v { font-size: 22px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.5px; }
+.stat .d { font-size: 11.5px; margin-top: 5px; color: var(--txt-2); font-family: var(--mono); }
+
+/* ---------------- 按钮 ---------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 15px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--bg-3); color: var(--txt-0);
+  font-size: 13px; font-family: var(--sans); font-weight: 500;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: #24304a; border-color: #33497a; }
+.btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.btn.pri { background: linear-gradient(135deg, var(--ark), #ff9500); border-color: transparent; color: #1a1205; font-weight: 600; }
+.btn.pri:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 4px 18px rgba(255, 176, 32, 0.28); }
+.btn.cy { background: linear-gradient(135deg, var(--meta), #12a8a6); border-color: transparent; color: #04211f; font-weight: 600; }
+.btn.cy:hover:not(:disabled) { filter: brightness(1.1); }
+.btn.dg { color: var(--down); border-color: #4a2233; }
+.btn.dg:hover:not(:disabled) { background: #2a1524; }
+.btn.sm { padding: 5px 11px; font-size: 12px; }
+.btn.full { width: 100%; }
+
+/* ---------------- 地图 ---------------- */
+.map-shell { position: relative; background: var(--bg-1); border: 1px solid var(--line-soft); border-radius: var(--r); overflow: hidden; }
+#mapCanvas { display: block; width: 100%; height: auto; cursor: crosshair; image-rendering: pixelated; }
+
+.map-tools {
+  position: absolute; top: 12px; left: 12px;
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.chip {
+  padding: 5px 11px; border-radius: 20px; font-size: 12px;
+  background: rgba(12, 18, 32, 0.9); border: 1px solid var(--line);
+  color: var(--txt-1); cursor: pointer; transition: all 0.15s;
+  backdrop-filter: blur(8px); font-family: var(--sans);
+}
+.chip:hover { border-color: #33497a; color: var(--txt-0); }
+.chip.on { background: rgba(255, 176, 32, 0.16); border-color: var(--ark); color: var(--ark); }
+
+.legend {
+  position: absolute; bottom: 12px; left: 12px;
+  display: flex; gap: 14px; flex-wrap: wrap;
+  padding: 8px 13px; border-radius: 8px;
+  background: rgba(12, 18, 32, 0.9); border: 1px solid var(--line);
+  backdrop-filter: blur(8px); font-size: 11.5px; color: var(--txt-1);
+}
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+/* ---------------- 地块详情 ---------------- */
+.land-empty { padding: 44px 20px; text-align: center; color: var(--txt-2); font-size: 13px; }
+.land-empty .big { font-size: 30px; margin-bottom: 10px; opacity: 0.35; }
+
+.kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed var(--line-soft); font-size: 13px; }
+.kv:last-child { border-bottom: none; }
+.kv .k { color: var(--txt-2); }
+.kv .v { font-family: var(--mono); font-weight: 600; }
+
+.bar { height: 5px; border-radius: 3px; background: var(--bg-3); overflow: hidden; margin-top: 5px; }
+.bar > i { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+/* ---------------- 建筑列表 ---------------- */
+.bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bitem {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: 8px;
+  background: var(--bg-2); border: 1px solid var(--line-soft);
+  cursor: pointer; transition: all 0.15s;
+}
+.bitem:hover { border-color: #33497a; background: var(--bg-3); }
+.bitem.sel { border-color: var(--ark); background: rgba(255, 176, 32, 0.1); }
+.bitem .ico { font-size: 19px; flex-shrink: 0; }
+.bitem .nm { font-size: 12.5px; font-weight: 500; line-height: 1.3; }
+.bitem .cs { font-size: 11px; color: var(--txt-2); font-family: var(--mono); }
+
+/* ---------------- 交易流水 ---------------- */
+.txrow {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 16px; border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px; animation: slideIn 0.32s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: translateX(-8px); background: rgba(108,140,255,0.13); } to { opacity: 1; transform: none; } }
+.txrow .ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex-shrink: 0; }
+.txrow .bd { flex: 1; min-width: 0; }
+.txrow .t1 { font-weight: 500; }
+.txrow .t2 { font-size: 11px; color: var(--txt-2); font-family: var(--mono); }
+.txrow .amt { font-family: var(--mono); font-weight: 600; font-size: 12.5px; text-align: right; }
+.txrow .amt .x { display: block; font-size: 10.5px; color: var(--txt-2); font-weight: 400; }
+
+/* ---------------- 表格 ---------------- */
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  text-align: left; padding: 9px 16px; font-weight: 500;
+  color: var(--txt-2); font-size: 11.5px; letter-spacing: 0.3px;
+  border-bottom: 1px solid var(--line-soft); background: var(--bg-2);
+}
+td { padding: 9px 16px; border-bottom: 1px solid var(--line-soft); font-family: var(--mono); }
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--bg-2); }
+.mono { font-family: var(--mono); }
+
+/* ---------------- Toast ---------------- */
+#toasts { position: fixed; bottom: 22px; right: 22px; z-index: 999; display: flex; flex-direction: column; gap: 9px; }
+.toast {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 16px; border-radius: 9px; min-width: 260px; max-width: 380px;
+  background: var(--bg-3); border: 1px solid var(--line);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+  animation: tin 0.28s ease; font-size: 13px;
+}
+@keyframes tin { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+.toast.ok { border-left: 3px solid var(--up); }
+.toast.err { border-left: 3px solid var(--down); }
+.toast.warn { border-left: 3px solid var(--ark); }
+.toast .ti { font-size: 16px; }
+
+/* ---------------- 模态 ---------------- */
+.mask {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(3, 6, 12, 0.82); backdrop-filter: blur(5px);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.mask.on { display: flex; animation: fade 0.2s; }
+.modal {
+  width: 100%; max-width: 520px; max-height: 88vh; overflow: auto;
+  background: var(--bg-1); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.72);
+}
+.modal-h { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line-soft); }
+.modal-h h3 { font-size: 15px; }
+.modal-b { padding: 18px 20px; }
+.modal-f { padding: 14px 20px; border-top: 1px solid var(--line-soft); display: flex; gap: 9px; justify-content: flex-end; }
+.x { background: none; border: none; color: var(--txt-2); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+.x:hover { color: var(--txt-0); }
+
+/* ---------------- 表单 ---------------- */
+.field { margin-bottom: 15px; }
+.field label { display: block; font-size: 12.5px; color: var(--txt-1); margin-bottom: 6px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 9px 12px; border-radius: 7px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--txt-0); font-size: 13.5px; font-family: var(--sans);
+  outline: none; transition: border-color 0.15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 70px; font-family: var(--sans); }
+.hint { font-size: 11.5px; color: var(--txt-2); margin-top: 5px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+
+/* ---------------- 代码块 ---------------- */
+pre {
+  background: #05080f; border: 1px solid var(--line-soft); border-radius: 8px;
+  padding: 14px 16px; overflow: auto; max-height: 560px;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.65; color: #b8c6e0;
+}
+code { font-family: var(--mono); font-size: 12px; background: var(--bg-3); padding: 1.5px 5px; border-radius: 4px; color: var(--ark); }
+
+.pill {
+  display: inline-block; padding: 2px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 500; font-family: var(--sans);
+}
+.pill.ok { background: rgba(61, 220, 151, 0.15); color: var(--up); }
+.pill.warn { background: rgba(255, 176, 32, 0.15); color: var(--ark); }
+.pill.err { background: rgba(255, 92, 122, 0.15); color: var(--down); }
+.pill.info { background: rgba(108, 140, 255, 0.15); color: var(--accent); }
+
+.empty { padding: 30px; text-align: center; color: var(--txt-2); font-size: 12.5px; }
+.muted { color: var(--txt-2); }
+.nowrap { white-space: nowrap; }
+.tac { text-align: center; }
+.mb8 { margin-bottom: 8px; }
+.mb14 { margin-bottom: 14px; }
+.mt14 { margin-top: 14px; }
+.flex { display: flex; align-items: center; gap: 8px; }
+.between { display: flex; align-items: center; justify-content: space-between; }
+
+</style>
+</head>
+<body>
+<div style="background:linear-gradient(90deg,#ffb020,#ff8a00);color:#1a1205;
+     padding:7px 18px;font-size:12.5px;font-weight:600;text-align:center;letter-spacing:.3px">
+  ◈ 元界方舟 MetaArk World · 单文件演示版 —— 所有功能可离线运行，双击即玩
+</div>
+
+
+<!-- ============ 顶部导航 ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">◈</div>
+    <div class="brand-text">
+      <b>元界方舟</b>
+      <span>METAARK WORLD</span>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="on" data-p="world">🗺️ 世界地图</button>
+    <button data-p="economy">📊 经济看板</button>
+    <button data-p="chain">⛓️ 链上浏览器</button>
+    <button data-p="contract">📜 智能合约</button>
+    <button data-p="docs">📖 白皮书</button>
+  </nav>
+  <div class="wallet">
+    <span class="dot"></span>
+    <span class="addr">0x7A3f…9E2c</span>
+    <span class="pill ok" id="wBlock">#18,204,336</span>
+  </div>
+</header>
+
+<!-- ============ 币价条 ============ -->
+<div class="ticker">
+  <div class="tk"><span class="lbl">$ARK</span><span class="val c-ark" id="wArk">0</span><span class="chg up">▲ 2.41%</span></div>
+  <div class="tk"><span class="lbl">$META</span><span class="val c-meta" id="wMeta">0</span><span class="chg down">▼ 0.83%</span></div>
+  <div class="tk"><span class="lbl">ETH</span><span class="val mono" id="wEth">0</span><span class="chg up">▲ 1.12%</span></div>
+  <div class="tk"><span class="lbl">Gas</span><span class="val">12 Gwei</span></div>
+  <div class="tk"><span class="lbl">网络</span><span class="val c-meta">MetaArk Local · 31337</span></div>
+  <div class="tk"><span class="lbl">出块</span><span class="val">~3.2s</span></div>
+  <div class="tk"><span class="lbl">TPS</span><span class="val" id="wTps">24</span></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ==================== 页 1：世界地图 ==================== -->
+  <section class="page on" id="page-world">
+
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">$ARK 流通量</div><div class="v c-ark" id="statArk">0</div><div class="d">年通胀上限 3%</div></div>
+      <div class="stat"><div class="k">累计燃烧</div><div class="v" style="color:var(--burn)" id="statBurned">0</div><div class="d">建造 5% + 交易税 3%</div></div>
+      <div class="stat"><div class="k">已铸造地块</div><div class="v" id="statLands">0</div><div class="d">硬顶 4096 · 按活跃度解锁</div></div>
+      <div class="stat"><div class="k">全服日产出</div><div class="v" style="color:var(--up)" id="statYield">0</div><div class="d">ARK / 日</div></div>
+    </div>
+
+    <div class="grid g-map">
+      <!-- 地图 -->
+      <div>
+        <div class="map-shell">
+          <canvas id="mapCanvas"></canvas>
+          <div class="map-tools">
+            <button class="chip on" data-f="all">全部</button>
+            <button class="chip" data-f="free">未铸造</button>
+            <button class="chip" data-f="mine">我的土地</button>
+            <button class="chip" data-f="rent">可租赁</button>
+            <button class="chip" data-f="listed">挂售中</button>
+            <button class="chip" id="heatToggle">🔥 人气热力</button>
+          </div>
+          <div class="legend">
+            <span><i style="background:#4a7c59"></i>大陆</span>
+            <span><i style="background:#2b6cb0"></i>海域</span>
+            <span><i style="background:#7c5cbf"></i>空岛</span>
+            <span><i style="background:#ffb020"></i>我的地</span>
+            <span><i style="background:#3ddc97"></i>他人地</span>
+            <span><i style="background:#6c8cff"></i>出租中</span>
+            <span><i style="background:#26d0ce"></i>挂售中</span>
+          </div>
+        </div>
+
+        <!-- 我的资产 -->
+        <div class="grid g-2 mt14">
+          <div class="card">
+            <div class="card-h"><h3>🏠 我的资产</h3><span class="sub" id="myLands">0 块地</span></div>
+            <div class="card-b tight" id="holdings"></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>📈 我的收益</h3><span class="sub">实时结算</span></div>
+            <div class="card-b">
+              <div class="kv"><span class="k">$ARK 余额</span><span class="v c-ark" id="myArk">0</span></div>
+              <div class="kv"><span class="k">$META 余额</span><span class="v c-meta" id="myMeta">0</span></div>
+              <div class="kv"><span class="k">持有地块</span><span class="v" id="myLands2">0</span></div>
+              <div class="kv"><span class="k">日产出合计</span><span class="v" style="color:var(--up)" id="myYield">0</span></div>
+              <div class="kv"><span class="k">累计协议抽成</span><span class="v" id="protoFee">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：地块详情 + 交易流水 -->
+      <div>
+        <div class="card mb14">
+          <div id="landDetail"></div>
+        </div>
+        <div class="card">
+          <div class="card-h">
+            <h3>⚡ 实时交易流水</h3>
+            <span class="sub">链上确认</span>
+          </div>
+          <div class="card-b tight" id="txFeed" style="max-height:420px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 2：经济看板 ==================== -->
+  <section class="page" id="page-economy">
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">$ARK 流通量</div><div class="v c-ark" id="statArk2">0</div><div class="d">效用币 · 通胀受控</div></div>
+      <div class="stat"><div class="k">$META 供应量</div><div class="v c-meta" id="statMeta">0</div><div class="d">治理币 · 硬顶 1 亿</div></div>
+      <div class="stat"><div class="k">燃烧率</div><div class="v" style="color:var(--burn)" id="burnRate">0%</div><div class="d">累计销毁 / 曾发行</div></div>
+      <div class="stat"><div class="k">建筑总数</div><div class="v" id="statBuilt">0</div><div class="d">全服建造量</div></div>
+    </div>
+
+    <div class="grid g-map mb14">
+      <div class="card">
+        <div class="card-h">
+          <h3>双币供应量与通缩曲线</h3>
+          <span class="sub">近 28 个周期</span>
+        </div>
+        <div class="card-b"><canvas id="econChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>产业分布</h3><span class="sub">按建筑类型</span></div>
+        <div class="card-b" id="sectors"></div>
+      </div>
+    </div>
+
+    <div class="grid g-3">
+      <div class="card">
+        <div class="card-h"><h3>💧 流动性池与燃烧</h3></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">协议抽成累计</span><span class="v" id="protoFee2">0</span></div>
+          <div class="kv"><span class="k">租赁成交总额</span><span class="v" id="rentVol">0</span></div>
+          <div class="kv"><span class="k">土地成交总额</span><span class="v" id="tradeVol">0</span></div>
+          <div class="kv"><span class="k">当前税率</span><span class="v">3.0%</span></div>
+          <div class="kv"><span class="k">房东分成</span><span class="v" style="color:var(--up)">90%</span></div>
+          <div class="kv"><span class="k">协议分成</span><span class="v" style="color:var(--ark)">10%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>🌊 增发与通胀控制</h3><span class="sub">Minter 额度</span></div>
+        <div class="card-b" id="minterList"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>🛡️ 防崩盘机制</h3></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">地块解锁规则</span><span class="v">每 100 活跃玩家 +10 格</span></div>
+          <div class="kv"><span class="k">地块硬顶</span><span class="v">4,096</span></div>
+          <div class="kv"><span class="k">建筑维护费</span><span class="v">20 × 等级 ARK</span></div>
+          <div class="kv"><span class="k">衰败宽限期</span><span class="v">7 天</span></div>
+          <div class="kv"><span class="k">衰减速率</span><span class="v">每 7 天 -25%</span></div>
+          <div class="kv"><span class="k">材料半衰期</span><span class="v">随全服产出衰减</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 3：链上浏览器 ==================== -->
+  <section class="page" id="page-chain">
+    <div class="grid g-2">
+      <div class="card">
+        <div class="card-h"><h3>📦 最新区块</h3><span class="sub">MetaArk Local Chain</span></div>
+        <div style="max-height:620px;overflow-y:auto">
+          <table>
+            <thead><tr><th>高度</th><th>哈希</th><th>交易</th><th>Gas Used</th><th>大小</th><th>时间</th></tr></thead>
+            <tbody id="blockList"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>◈ 事件日志</h3><span class="sub">Contract Events</span></div>
+        <div class="card-b tight" id="logList" style="max-height:620px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 4：智能合约 ==================== -->
+  <section class="page" id="page-contract">
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">合约数量</div><div class="v">5</div><div class="d">零外部依赖手写实现</div></div>
+      <div class="stat"><div class="k">代码行数</div><div class="v">1,460</div><div class="d">Solidity 0.8.26</div></div>
+      <div class="stat"><div class="k">测试用例</div><div class="v" style="color:var(--up)">99 / 99</div><div class="d">全部通过 · 真实 EVM</div></div>
+      <div class="stat"><div class="k">公开函数</div><div class="v">148</div><div class="d">40 个事件</div></div>
+    </div>
+
+    <div class="grid g-2 mb14">
+      <div class="card">
+        <div class="card-h"><h3>✅ 测试结果</h3><span class="sub">Hardhat EVM 真实执行</span></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">合约部署与初始化</span><span class="v" style="color:var(--up)">9 通过</span></div>
+          <div class="kv"><span class="k">$ARK 分发与通胀上限</span><span class="v" style="color:var(--up)">7 通过</span></div>
+          <div class="kv"><span class="k">土地铸造与地形加成</span><span class="v" style="color:var(--up)">12 通过</span></div>
+          <div class="kv"><span class="k">建造与 5% 焚烧</span><span class="v" style="color:var(--up)">10 通过</span></div>
+          <div class="kv"><span class="k">升级与产出衰减</span><span class="v" style="color:var(--up)">7 通过</span></div>
+          <div class="kv"><span class="k">材料生产与合成</span><span class="v" style="color:var(--up)">6 通过</span></div>
+          <div class="kv"><span class="k">土地交易与 3% 税</span><span class="v" style="color:var(--up)">11 通过</span></div>
+          <div class="kv"><span class="k">核心闭环：挂租→消费→提现</span><span class="v" style="color:var(--up)">16 通过</span></div>
+          <div class="kv"><span class="k">$META 治理投票</span><span class="v" style="color:var(--up)">9 通过</span></div>
+          <div class="kv"><span class="k">防崩盘机制</span><span class="v" style="color:var(--up)">12 通过</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>📐 合约架构</h3><span class="sub">依赖关系</span></div>
+        <div class="card-b">
+          <pre style="max-height:520px;border:none;padding:0;background:transparent">
+┌─────────────────────────────────────────┐
+│           LandNFT (ERC-721)             │
+│  坐标 · 地形 · 人气 · 槽位 · 租赁配置    │
+└────────┬────────────────────┬───────────┘
+         │ consumeSlot        │ assignRenter
+         │ adjustPopularity   │ marketTransfer
+         ▼                    ▼
+┌──────────────────┐  ┌──────────────────┐
+│  BuildingNFT     │  │   LandMarket     │
+│  (ERC-1155)      │  │  买卖 · 租赁托管  │
+│  建造/升级/衰败   │  │  90/10 自动分账   │
+└────────┬─────────┘  └────────┬─────────┘
+         │ burnFrom            │ transferFrom
+         ▼                     ▼
+┌─────────────────────────────────────────┐
+│           ArkToken ($ARK)               │
+│  通胀上限 3% · 焚烧 · Minter 白名单      │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│          MetaToken ($META)              │
+│  硬顶 1 亿 · 加权投票 · 精英区门槛       │
+└─────────────────────────────────────────┘</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h3>📄 合约源码</h3>
+        <div class="flex" style="gap:6px">
+          <button class="chip on" data-c="ArkToken">ArkToken</button>
+          <button class="chip" data-c="MetaToken">MetaToken</button>
+          <button class="chip" data-c="LandNFT">LandNFT</button>
+          <button class="chip" data-c="BuildingNFT">BuildingNFT</button>
+          <button class="chip" data-c="LandMarket">LandMarket</button>
+        </div>
+      </div>
+      <div class="card-b">
+        <pre id="codeView">加载中…</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 5：白皮书 ==================== -->
+  <section class="page" id="page-docs">
+    <div class="card mb14">
+      <div class="card-h"><h3>📖 元界方舟 · 项目白皮书</h3><span class="sub">v1.0</span></div>
+      <div class="card-b" style="line-height:1.85">
+
+        <h3 style="margin-bottom:10px;color:var(--ark)">一、项目定位</h3>
+        <p style="color:var(--txt-1);margin-bottom:20px">
+          元界方舟（MetaArk World）是区块链版「我的世界 + 模拟城市」。玩家拥有土地、建造空间、经营生态、
+          社交交易，所有核心资产上链。与纯打怪型 GameFi 不同，本项目以<b>经济体经营</b>为核心乐趣：
+          土地是产权、建筑是产能、玩家之间的租赁与交易构成真实的经济循环。
+        </p>
+
+        <h3 style="margin-bottom:10px;color:var(--ark)">二、核心玩法闭环</h3>
+        <p style="color:var(--txt-1);margin-bottom:14px">
+          已完成 MVP 的可展示闭环：<b>买地 → 盖店 → 挂租 → 别人来消费 → 提现代币</b>。
+          这条链路已在 99 个真实 EVM 测试用例中完整跑通，包括 90/10 分账的精确性验证。
+        </p>
+        <div class="grid g-2" style="margin-bottom:20px">
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">土地占领</b><br>
+            <span style="color:var(--txt-1)">地图分大陆/海域/空岛，通过竞拍或新手任务领取创世地块（ERC-721）</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">自由建造</b><br>
+            <span style="color:var(--txt-1)">放置建筑 NFT（工坊/商店/乐园），改变地块人气、产出与租金</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">生产经营</b><br>
+            <span style="color:var(--txt-1)">形成「原料 → 制造 → 零售」链条，木材+矿石可合成能量核</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">治理共建</b><br>
+            <span style="color:var(--txt-1)">持 $META 可对地图开放、税率、活动规则投票</span>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:10px;color:var(--meta)">三、双币经济模型</h3>
+        <table style="margin-bottom:20px">
+          <thead><tr><th>维度</th><th>$ARK 效用币</th><th>$META 治理币</th></tr></thead>
+          <tbody>
+            <tr><td>总量</td><td>无限但控产出（年通胀 ≤3%）</td><td>固定 1 亿，永不增发</td></tr>
+            <tr><td>获取</td><td>生产、任务、出租、活动</td><td>创世空投、土地分红、排行榜</td></tr>
+            <tr><td>消耗</td><td>建造、升级、维修、买材料</td><td>买稀有地、投票、进精英区</td></tr>
+            <tr><td>通缩</td><td>建造焚烧 5%、交易税 3%</td><td>天然通缩（总量固定）</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-bottom:10px;color:var(--burn)">四、燃烧闭环（已上链验证）</h3>
+        <div class="grid g-3" style="margin-bottom:20px">
+          <div class="stat"><div class="k">建造焚烧</div><div class="v" style="color:var(--burn)">5%</div><div class="d">实测：700 ARK → 焚 35 ARK</div></div>
+          <div class="stat"><div class="k">交易税</div><div class="v" style="color:var(--burn)">3%</div><div class="d">实测：5000 ARK → 税 150 ARK</div></div>
+          <div class="stat"><div class="k">租赁分成</div><div class="v" style="color:var(--up)">90/10</div><div class="d">实测零误差分账</div></div>
+        </div>
+
+        <h3 style="margin-bottom:10px;color:var(--up)">五、防崩盘四道闸</h3>
+        <ol style="color:var(--txt-1);padding-left:20px;margin-bottom:20px">
+          <li style="margin-bottom:7px"><b>土地不无限发</b>：硬顶 4096 格，新地块按活跃玩家数解锁（100 活跃 → 10 格）</li>
+          <li style="margin-bottom:7px"><b>建筑需维护</b>：7 天宽限期后每 7 天衰减 25%，长期不经营会衰败至零产出</li>
+          <li style="margin-bottom:7px"><b>产出半衰期</b>：材料产出随全服总量衰减，通胀年上限 3% 硬约束</li>
+          <li><b>通缩对冲</b>：建造 5% + 交易 3% + 租赁 10% 持续焚烧，形成买盘压力</li>
+        </ol>
+
+        <h3 style="margin-bottom:10px;color:var(--txt-0)">六、技术实现</h3>
+        <table>
+          <thead><tr><th>层次</th><th>技术选型</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>智能合约</td><td>Solidity 0.8.26 · 手写 ERC-721/1155/20</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>测试</td><td>Hardhat EVM · 99 用例</td><td><span class="pill ok">99/99 通过</span></td></tr>
+            <tr><td>前端</td><td>Canvas 像素引擎 + 链模拟器</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>钱包</td><td>内置模拟钱包（可接 MetaMask）</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>元数据</td><td>链下 IPFS / 对象存储</td><td><span class="pill info">方案就绪</span></td></tr>
+            <tr><td>后端</td><td>节点服务 + 游戏状态机</td><td><span class="pill info">方案就绪</span></td></tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ 模态 ============ -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="mTitle">标题</h3>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="modal-b" id="mBody"></div>
+    <div class="modal-f" id="mFoot"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ==== chain.js ==== */
+/* =====================================================================
+   MetaArk Chain Simulator
+   浏览器内轻量区块链：账户 / Nonce / 交易 / Gas / 区块打包 / 事件日志
+   用途：无需 MetaMask，也能完整演示「上链」的每一步与真实经济结算
+   ===================================================================== */
+'use strict';
+
+const Chain = (() => {
+  // ---------- 链状态 ----------
+  let blockNumber = 18_204_336;
+  let blockTime = Math.floor(Date.now() / 1000);
+  const chainId = 31337;
+  const gasPrice = 12;              // Gwei
+  const BURN_POOL = '0x000000000000000000000000000000000000dEaD';
+
+  const blocks = [];                // 区块列表
+  const txs = [];                   // 全部交易
+  const logs = [];                  // 事件日志
+  let txNonce = 0;
+  let blockTxBuf = [];
+
+  // ---------- 账户 ----------
+  const accounts = new Map();
+
+  function mkAddr(seed) {
+    // 用确定性方式生成合法 hex 地址
+    let h = 0x811c9dc5;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    let out = '0x';
+    let x = h;
+    for (let i = 0; i < 40; i++) {
+      x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+      out += ((x >>> 24) & 0xf).toString(16);
+    }
+    return out;
+  }
+
+  function addAccount(name, label, opts = {}) {
+    const addr = mkAddr(name);
+    const acc = {
+      name,
+      label,
+      addr,
+      ark: opts.ark || 0,
+      meta: opts.meta || 0,
+      eth: opts.eth !== undefined ? opts.eth : 12.48,
+      nonce: 0,
+      lands: [],
+      buildings: {},   // landTokenId -> [typeId,...]
+      materials: {},   // typeId -> amount
+    };
+    accounts.set(addr, acc);
+    return acc;
+  }
+
+  // ---------- 事件 ----------
+  const listeners = {};
+  function on(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); }
+  function emit(ev, data) { (listeners[ev] || []).forEach((f) => f(data)); }
+
+  // ---------- 区块 ----------
+  function mineBlock(maxTx = 6) {
+    const take = blockTxBuf.splice(0, maxTx);
+    if (!take.length && blocks.length) return blocks[blocks.length - 1];
+
+    blockNumber += 1;
+    blockTime += 2 + Math.floor(Math.random() * 11);
+    const parent = blocks.length ? blocks[blocks.length - 1].hash : '0x' + '0'.repeat(64);
+
+    // 伪哈希
+    const seed = blockNumber + ':' + take.length + ':' + parent.slice(2, 10);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    let hash = '0x';
+    let x = h;
+    for (let i = 0; i < 64; i++) { x = (Math.imul(x, 1103515245) + 12345) >>> 0; hash += ((x >>> 28) & 0xf).toString(16); }
+
+    const blk = {
+      number: blockNumber,
+      hash,
+      parentHash: parent,
+      timestamp: blockTime,
+      txCount: take.length,
+      gasUsed: take.reduce((s, t) => s + t.gasUsed, 0),
+      txs: take.map((t) => t.hash),
+      miner: '0xMetaArk…Validator',
+      size: 320 + take.length * 148,
+    };
+    blocks.push(blk);
+    if (blocks.length > 60) blocks.shift();
+
+    // 落块后回填确认数
+    take.forEach((t) => { t.blockNumber = blockNumber; t.status = 'success'; });
+
+    emit('block', blk);
+    return blk;
+  }
+
+  // ---------- 交易 ----------
+  /**
+   * 提交一笔交易：校验 → 扣 Gas → 执行 → 进内存池 → 打包
+   * @param {object} o { from, to, method, args, gas, value, exec }
+   *   exec(callCtx) 返回 { ok, amount, symbol, note } —— 具体业务结算
+   */
+  function send(o) {
+    const from = accounts.get(o.from);
+    if (!from) return { ok: false, err: '账户不存在' };
+
+    const gasUsed = o.gas || 21_000 + Math.floor(Math.random() * 42_000);
+    const gasCostEth = (gasUsed * gasPrice) / 1e9;
+
+    // 真实地校验 ETH 余额
+    if (from.eth < gasCostEth) return { ok: false, err: 'ETH 不足以支付 Gas' };
+
+    from.eth = +(from.eth - gasCostEth).toFixed(6);
+    from.nonce += 1;
+
+    const txHash = mkTxHash(from.addr, from.nonce, blockNumber);
+    const tx = {
+      hash: txHash,
+      from: from.addr,
+      fromName: from.name,
+      to: o.to || null,
+      method: o.method,
+      args: o.args || [],
+      nonce: from.nonce,
+      gasUsed,
+      gasPrice,
+      gasCostEth,
+      value: o.value || 0,
+      timestamp: Math.floor(Date.now() / 1000),
+      blockNumber: null,
+      status: 'pending',
+      note: '',
+    };
+
+    // 执行业务逻辑
+    if (typeof o.exec === 'function') {
+      const r = o.exec({ from, accounts, emit, BURN_POOL, chain: api });
+      if (r && r.err) {
+        tx.status = 'failed';
+        tx.note = r.err;
+        txs.unshift(tx);
+        emit('tx', tx);
+        return { ok: false, err: r.err, tx };
+      }
+      if (r) { tx.note = r.note || ''; tx.amount = r.amount; tx.symbol = r.symbol; }
+    }
+
+    txNonce += 1;
+    txs.unshift(tx);
+    if (txs.length > 300) txs.pop();
+    emit('tx', tx);
+
+    blockTxBuf.push(tx);
+    // 攒够或随机落块
+    if (blockTxBuf.length >= 3 || Math.random() > 0.45) mineBlock();
+
+    return { ok: true, tx };
+  }
+
+  function mkTxHash(addr, nonce, blk) {
+    const s = addr + nonce + blk + Date.now() + Math.random();
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    let out = '0x';
+    let x = h;
+    for (let i = 0; i < 64; i++) { x = (Math.imul(x, 1103515245) + 12345) >>> 0; out += ((x >>> 28) & 0xf).toString(16); }
+    return out;
+  }
+
+  // ---------- 事件日志 ----------
+  function pushLog(entry) {
+    const log = {
+      ...entry,
+      blockNumber: blockNumber + 1,
+      txHash: mkTxHash('log', logs.length, blockNumber).slice(0, 12),
+      ts: Math.floor(Date.now() / 1000),
+    };
+    logs.unshift(log);
+    if (logs.length > 200) logs.pop();
+    emit('log', log);
+  }
+
+  // ---------- 对外 API ----------
+  const api = {
+    chainId, gasPrice, BURN_POOL,
+    accounts,
+    blocks, txs, logs,
+    on, emit, send, mineBlock, pushLog, addAccount, mkAddr,
+
+    get blockNumber() { return blockNumber; },
+    get blockTime() { return blockTime; },
+    set blockTime(v) { blockTime = v; },
+    get pending() { return blockTxBuf.length; },
+
+    acct(name) { return accounts.get(mkAddr(name)); },
+    acctByAddr(a) { return accounts.get(a); },
+    short(a, n = 4) { return a ? a.slice(0, 2 + n) + '…' + a.slice(-n) : ''; },
+    fmtNum(v, d = 2) {
+      if (v === undefined || v === null) return '—';
+      const n = Number(v);
+      return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    },
+    fmtInt(v) { return Number(v || 0).toLocaleString('en-US'); },
+    timeAgo(ts) {
+      const s = Math.floor(Date.now() / 1000) - ts;
+      if (s < 60) return s + ' 秒前';
+      if (s < 3600) return Math.floor(s / 60) + ' 分钟前';
+      return Math.floor(s / 3600) + ' 小时前';
+    },
+  };
+
+  return api;
+})();
+
+</script>
+<script>
+/* ==== world.js ==== */
+/* =====================================================================
+   MetaArk World —— 游戏世界状态与经济模型
+   地图生成 / 地块属性 / 建筑定义 / 双币经济 / 结算规则
+   ===================================================================== */
+'use strict';
+
+const World = (() => {
+  // ================= 常量 =================
+  const MAP_W = 34, MAP_H = 22, TILE = 26;
+
+  const LAND_TYPE = { 0: { n: '大陆', en: 'Mainland', rar: 1.0, c: '#4a7c59' },
+                      1: { n: '海域', en: 'Ocean', rar: 1.5, c: '#2b6cb0' },
+                      2: { n: '空岛', en: 'SkyIsland', rar: 2.5, c: '#7c5cbf' } };
+
+  const TERRAIN = { 0: { n: '平原', yield: 1.00, c: '#5c9e6b', ico: '🌾' },
+                    1: { n: '火山', yield: 1.25, c: '#8b4a3a', ico: '🌋' },
+                    2: { n: '冰川', yield: 1.15, c: '#5b8fa8', ico: '🧊' } };
+
+  // 建筑类型（与 BuildingNFT.sol 的 _seedTypes 完全一致）
+  const BUILDINGS = [
+    { id: 0, n: '基础工坊', ico: '🔨', kind: '功能', cost: 500,  yield: 30, pop: 20,  maxLv: 5 },
+    { id: 1, n: '初级矿场', ico: '⛏️', kind: '功能', cost: 800,  yield: 55, pop: 15,  maxLv: 5 },
+    { id: 2, n: '零售商店', ico: '🏪', kind: '功能', cost: 700,  yield: 45, pop: 45,  maxLv: 5 },
+    { id: 3, n: '农田',     ico: '🌱', kind: '功能', cost: 300,  yield: 18, pop: 10,  maxLv: 5 },
+    { id: 4, n: '英雄雕像', ico: '🗿', kind: '装饰', cost: 1200, yield: 0,  pop: 80,  maxLv: 3 },
+    { id: 5, n: '灯塔',     ico: '🗼', kind: '装饰', cost: 1500, yield: 0,  pop: 110, maxLv: 3 },
+    { id: 6, n: '主题乐园', ico: '🎡', kind: '装饰', cost: 3000, yield: 0,  pop: 220, maxLv: 3 },
+  ];
+  const MATERIALS = [
+    { id: 7, n: '木材', ico: '🪵' }, { id: 8, n: '矿石', ico: '🪨' },
+    { id: 9, n: '能量核', ico: '⚡' }, { id: 10, n: '设计图', ico: '📜' },
+  ];
+
+  // 经济参数（与合约常量对齐）
+  const ECON = {
+    BURN_RATE: 0.05,        // 建造焚烧 5%
+    TRADE_TAX: 0.03,        // 交易税 3%
+    LANDLORD_SHARE: 0.90,   // 房东分成 90%
+    PROTOCOL_SHARE: 0.10,   // 协议抽成 10%
+    INFLATION_CAP: 0.03,    // 年通胀上限 3%
+    DECAY_GRACE_DAYS: 7,    // 衰败宽限期
+    DECAY_PER_WEEK: 0.25,   // 每 7 天衰减 25%
+  };
+
+  // ================= 地图生成 =================
+  let seed = 20260214;
+  function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+
+  const tiles = [];   // 全部地块
+  const plots = new Map(); // "x,y" -> plot
+
+  (function genMap() {
+    seed = 20260214;
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        // 用噪声决定地形分布：中心偏大陆，边缘偏海/空岛
+        const cx = x / MAP_W - 0.5, cy = y / MAP_H - 0.5;
+        const d = Math.sqrt(cx * cx + cy * cy);
+        const n = rnd();
+
+        let landType;
+        if (d > 0.40 && n > 0.72) landType = 2;        // 空岛（外圈且随机）
+        else if (d > 0.30 && n > 0.45) landType = 1;   // 海域
+        else landType = 0;                              // 大陆
+
+        let terrain;
+        const t = rnd();
+        if (landType === 1) terrain = 1;                // 海域多为火山地貌
+        else if (t > 0.82) terrain = 2;                 // 冰川
+        else if (t > 0.58) terrain = 1;                 // 火山
+        else terrain = 0;                               // 平原
+
+        const plot = {
+          id: tiles.length,
+          x, y,
+          type: landType,
+          terrain,
+          popularity: 100,
+          slots: landType === 2 ? 6 : (landType === 1 ? 3 : 5),
+          buildings: [],           // [{typeId, level, lastMaint}]
+          listed: false,
+          price: 0,
+          owner: null,             // 账户 name
+          renter: null,
+          dailyRent: 0,
+          monthlyRent: 0,
+          minted: false,
+          value: 0,
+        };
+        tiles.push(plot);
+        plots.set(x + ',' + y, plot);
+      }
+    }
+  })();
+
+  // ================= 经济计算 =================
+
+  /** 地块估值（与 LandNFT.estimateValue 同逻辑） */
+  function estimateValue(p) {
+    const base = 100;
+    const byType = base * LAND_TYPE[p.type].rar;
+    const byPop = byType * (100 + p.popularity) / 200;
+    const bySlots = byPop * (100 + p.buildings.length * 20) / 100;
+    return Math.round(bySlots);
+  }
+
+  /** 建筑有效日产出（含衰败），与 BuildingNFT.effectiveDailyYield 同逻辑 */
+  function effectiveYield(p, b) {
+    const def = BUILDINGS.find((x) => x.id === b.typeId);
+    if (!def || !def.yield) return 0;
+    let gross = def.yield * (100 + (b.level - 1) * 50) / 100;
+    gross *= TERRAIN[p.terrain].yield;         // 地形加成
+    gross *= (1 + p.popularity / 500);         // 人气加成
+    return Math.round(gross * 100) / 100;
+  }
+
+  /** 地块总日产出 */
+  function plotYield(p) {
+    return p.buildings.reduce((s, b) => s + effectiveYield(p, b), 0);
+  }
+
+  /** 升级成本：buildCost * (lv+1) * 1.6 */
+  function upgradeCost(typeId, level) {
+    const def = BUILDINGS.find((x) => x.id === typeId);
+    return Math.round(def.cost * (level + 1) * 1.6);
+  }
+
+  /** 维护费 */
+  function maintenanceCost(typeId, level) {
+    return 20 * level;
+  }
+
+  // ================= 世界统计 =================
+  function stats() {
+    const owned = tiles.filter((t) => t.owner);
+    const rented = tiles.filter((t) => t.renter);
+    const built = tiles.reduce((s, t) => s + t.buildings.length, 0);
+    const dailyYield = owned.reduce((s, t) => s + plotYield(t), 0);
+    return {
+      totalTiles: tiles.length,
+      minted: tiles.filter((t) => t.minted).length,
+      owned: owned.length,
+      rented: rented.length,
+      built,
+      dailyYield,
+      avgPop: owned.length ? Math.round(owned.reduce((s, t) => s + t.popularity, 0) / owned.length) : 0,
+    };
+  }
+
+  return {
+    MAP_W, MAP_H, TILE, LAND_TYPE, TERRAIN, BUILDINGS, MATERIALS, ECON,
+    tiles, plots,
+    plotAt: (x, y) => plots.get(x + ',' + y),
+    estimateValue, effectiveYield, plotYield, upgradeCost, maintenanceCost, stats,
+    typeDef: (id) => BUILDINGS.find((b) => b.id === id) || MATERIALS.find((m) => m.id === id),
+  };
+})();
+
+</script>
+<script>
+/* ==== renderer.js ==== */
+/* =====================================================================
+   MetaArk World —— 像素地图渲染器
+   Canvas 2D 像素风渲染：地形 / 地块 / 建筑 / 人气热力 / 悬停高亮
+   ===================================================================== */
+'use strict';
+
+const Renderer = (() => {
+  let cv, ctx, dpr = 1;
+  let hover = null;      // 悬停地块
+  let selected = null;   // 选中地块
+  let filter = 'all';    // all | owned | rent | listed
+  let showHeat = false;
+  let t0 = 0;
+
+  const T = World.TILE;
+
+  function init(canvas) {
+    cv = canvas;
+    ctx = cv.getContext('2d');
+    resize();
+    window.addEventListener('resize', resize);
+
+    cv.addEventListener('mousemove', (e) => {
+      const p = pick(e);
+      if (p !== hover) { hover = p; cv.style.cursor = p ? 'pointer' : 'crosshair'; draw(); }
+    });
+    cv.addEventListener('mouseleave', () => { hover = null; draw(); });
+    cv.addEventListener('click', (e) => {
+      const p = pick(e);
+      if (p) { selected = p; Renderer.onSelect && Renderer.onSelect(p); }
+    });
+
+    // 动画循环（用于人气脉冲与海浪）
+    (function loop(ts) { t0 = ts || 0; draw(); requestAnimationFrame(loop); })(0);
+  }
+
+  function resize() {
+    if (!cv) return;
+    const wrapW = cv.parentElement.clientWidth;
+    const scale = Math.min(1, wrapW / (World.MAP_W * T));
+    dpr = window.devicePixelRatio || 1;
+    cv.width = World.MAP_W * T * dpr;
+    cv.height = World.MAP_H * T * dpr;
+    cv.style.width = '100%';
+    cv.style.height = 'auto';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    cv._scale = scale;
+  }
+
+  function pick(e) {
+    const r = cv.getBoundingClientRect();
+    const sc = (World.MAP_W * T) / r.width;
+    const x = Math.floor(((e.clientX - r.left) * sc) / T);
+    const y = Math.floor(((e.clientY - r.top) * sc) / T);
+    if (x < 0 || y < 0 || x >= World.MAP_W || y >= World.MAP_H) return null;
+    return World.plotAt(x, y);
+  }
+
+  // ---------- 绘制 ----------
+  function draw() {
+    if (!ctx) return;
+    const W = World.MAP_W * T, H = World.MAP_H * T;
+    ctx.clearRect(0, 0, W, H);
+
+    for (let y = 0; y < World.MAP_H; y++) {
+      for (let x = 0; x < World.MAP_W; x++) {
+        drawTile(World.plotAt(x, y));
+      }
+    }
+    drawOverlay();
+  }
+
+  function drawTile(p) {
+    const px = p.x * T, py = p.y * T;
+    const dimmed = !matchFilter(p);
+
+    // 基础地形色
+    let base = World.TERRAIN[p.terrain].c;
+    if (p.type === 1) base = shade(base, -12);           // 海域更暗
+    if (p.type === 2) base = shade(base, 16);            // 空岛更亮
+
+    // 人气热力覆盖
+    if (showHeat) {
+      const h = Math.min(1, (p.popularity - 100) / 500);
+      base = mix(base, '#ff3b30', h * 0.62);
+    }
+
+    ctx.fillStyle = dimmed ? shade(base, -55) : base;
+    ctx.fillRect(px, py, T, T);
+
+    // 像素噪点质感（确定性，不闪烁）
+    ctx.fillStyle = 'rgba(0,0,0,0.07)';
+    for (let i = 0; i < 3; i++) {
+      const n = ((p.id * 37 + i * 91) % 23);
+      ctx.fillRect(px + (n % 5) * 5, py + ((n * 3) % 5) * 5, 3, 3);
+    }
+
+    // 地形符号
+    ctx.font = '11px system-ui';
+    ctx.globalAlpha = dimmed ? 0.25 : 0.55;
+    ctx.fillText(World.TERRAIN[p.terrain].ico, px + 2, py + 12);
+    ctx.globalAlpha = 1;
+
+    // 网格线
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+
+    // 空岛/海域特殊边框
+    if (p.type === 2) { ctx.strokeStyle = 'rgba(160,120,255,0.5)'; ctx.strokeRect(px + 1.5, py + 1.5, T - 3, T - 3); }
+
+    // 已铸造标记
+    if (p.minted) {
+      ctx.fillStyle = p.owner === 'me' ? 'rgba(255,176,32,0.88)' : 'rgba(61,220,151,0.82)';
+      ctx.fillRect(px + T - 8, py + 2, 6, 6);
+    }
+
+    // 建筑图标
+    if (p.buildings.length) {
+      const shown = p.buildings.slice(0, 3);
+      shown.forEach((b, i) => {
+        const def = World.typeDef(b.typeId);
+        if (!def) return;
+        ctx.font = '13px system-ui';
+        ctx.globalAlpha = dimmed ? 0.3 : 1;
+        ctx.fillText(def.ico, px + 4 + i * 8, py + T - 5);
+      });
+      ctx.globalAlpha = 1;
+      // 等级角标
+      const maxLv = Math.max(...p.buildings.map((b) => b.level));
+      ctx.fillStyle = 'rgba(0,0,0,0.72)';
+      ctx.fillRect(px + 2, py + T - 17, 15, 11);
+      ctx.fillStyle = '#ffd166';
+      ctx.font = 'bold 9px ui-monospace, monospace';
+      ctx.fillText('L' + maxLv, px + 4, py + T - 8);
+    }
+
+    // 出租标记
+    if (p.renter) {
+      ctx.fillStyle = 'rgba(108,140,255,0.92)';
+      ctx.fillRect(px + 2, py + 2, 6, 6);
+    }
+    if (p.listed) {
+      ctx.fillStyle = 'rgba(38,208,206,0.92)';
+      ctx.fillRect(px + T / 2 - 3, py + 2, 6, 6);
+    }
+  }
+
+  /** 人气脉冲点：人气越高点越多 */
+  function drawOverlay() {
+    const now = performance.now();
+    const pulse = 0.5 + 0.5 * Math.sin(now / 700);
+
+    World.tiles.forEach((p) => {
+      if (p.popularity < 160) return;
+      const px = p.x * T, py = p.y * T;
+      const cnt = Math.min(5, Math.floor((p.popularity - 100) / 90));
+      ctx.globalAlpha = 0.14 + pulse * 0.16;
+      ctx.fillStyle = '#ffe08a';
+      for (let i = 0; i < cnt; i++) {
+        const a = (i / cnt) * Math.PI * 2 + now / 1600;
+        const r = T * 0.26;
+        ctx.fillRect(px + T / 2 + Math.cos(a) * r - 1, py + T / 2 + Math.sin(a) * r - 1, 2, 2);
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    // 悬停高亮
+    if (hover) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(hover.x * T + 1, hover.y * T + 1, T - 2, T - 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.13)';
+      ctx.fillRect(hover.x * T, hover.y * T, T, T);
+    }
+    // 选中
+    if (selected) {
+      ctx.strokeStyle = '#ffb020';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(selected.x * T + 1.5, selected.y * T + 1.5, T - 3, T - 3);
+    }
+  }
+
+  // ---------- 工具 ----------
+  function matchFilter(p) {
+    if (filter === 'all') return true;
+    if (filter === 'owned') return !!p.owner;
+    if (filter === 'mine') return p.owner === 'me';
+    if (filter === 'rent') return p.dailyRent > 0 || p.monthlyRent > 0;
+    if (filter === 'listed') return p.listed;
+    if (filter === 'free') return !p.owner;
+    return true;
+  }
+
+  function hex2rgb(h) {
+    h = h.replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function rgb2hex(r, g, b) {
+    const f = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+    return '#' + f(r) + f(g) + f(b);
+  }
+  function shade(c, amt) {
+    const [r, g, b] = hex2rgb(c);
+    return rgb2hex(r + amt, g + amt, b + amt);
+  }
+  function mix(c1, c2, t) {
+    const a = hex2rgb(c1), b = hex2rgb(c2);
+    return rgb2hex(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t);
+  }
+
+  return {
+    init,
+    redraw: draw,
+    setFilter(f) { filter = f; draw(); },
+    setHeat(v) { showHeat = v; draw(); },
+    getSelected() { return selected; },
+    select(p) { selected = p; draw(); },
+  };
+})();
+
+</script>
+<script>
+/* ==== app.js ==== */
+/* =====================================================================
+   MetaArk World —— 主应用
+   串联：世界状态 → 链上交易 → 经济看板 → 交互反馈
+   ===================================================================== */
+'use strict';
+
+const App = (() => {
+  // ================= 全局状态 =================
+  const S = {
+    me: 'me',
+    arkSupply: 1_000_000,
+    arkBurned: 0,
+    metaSupply: 50_000_000,
+    metaTotal: 50_000_000,
+    protoFee: 0,
+    tradeTax: 0,
+    tradeVolume: 0,
+    rentVolume: 0,
+    mintedCount: 0,
+    maxTiles: 240,
+    hardCap: 4096,
+    dailyYieldSeries: [],
+    hist: { ark: [], burned: [] },
+  };
+
+  let selected = null;
+  let buildPick = null;
+
+  // ================= 初始化 =================
+  function boot() {
+    // 账户
+    Chain.addAccount('me', '我的钱包', { ark: 12_800, meta: 36_000, eth: 12.48 });
+    Chain.addAccount('alice', 'Alice.eth', { ark: 8_400, meta: 4_200 });
+    Chain.addAccount('bob', 'Bob.dao', { ark: 15_600, meta: 2_600 });
+    Chain.addAccount('carol', 'Carol', { ark: 5_200, meta: 1_800 });
+    Chain.addAccount('dave', 'Dave', { ark: 22_100, meta: 800 });
+
+    seedWorld();
+    Renderer.init(document.getElementById('mapCanvas'));
+    Renderer.onSelect = onSelectPlot;
+    bindUI();
+    seedTxHistory();
+
+    // 生成初始曲线数据
+    for (let i = 0; i < 28; i++) {
+      S.hist.ark.push(980_000 + Math.round(Math.sin(i / 3) * 12_000) + i * 620);
+      S.hist.burned.push(Math.round(90 + i * 31 + Math.sin(i / 2) * 22));
+    }
+
+    refreshAll();
+    toast('ok', '欢迎来到元界方舟', '已连接本地链 #31337');
+    // 初始渲染 3 秒后自动落块，让区块浏览器有内容
+    setTimeout(() => Chain.mineBlock(), 3000);
+  }
+
+  /** 预置世界：一部分地块已被其他玩家持有，形成真实经济体 */
+  function seedWorld() {
+    const seedLands = [
+      { who: 'alice', pos: [[11, 9], [12, 9], [13, 10]], builds: [[2, 3], [0, 2]] },
+      { who: 'bob', pos: [[17, 12], [18, 12], [16, 13], [19, 11]], builds: [[1, 2], [6, 1]] },
+      { who: 'carol', pos: [[22, 7], [23, 8]], builds: [[4, 2]] },
+      { who: 'dave', pos: [[8, 15], [9, 15], [10, 14]], builds: [[5, 1], [3, 3]] },
+    ];
+
+    seedLands.forEach((g) => {
+      g.pos.forEach(([x, y], i) => {
+        const p = World.plotAt(x, y);
+        if (!p) return;
+        p.minted = true;
+        p.owner = g.who;
+        S.mintedCount += 1;
+        // 部分地块挂租
+        if (i === 0) {
+          p.dailyRent = 80 + Math.floor(Math.random() * 90);
+          p.monthlyRent = Math.round(p.dailyRent * 25);
+        }
+        // 设置建筑
+        g.builds.forEach(([tid, lv], bi) => {
+          if (bi < p.slots && (i + bi) % 2 === 0) {
+            p.buildings.push({ typeId: tid, level: lv, lastMaint: Date.now() });
+            const def = World.typeDef(tid);
+            p.popularity += def.pop;
+          }
+        });
+        p.popularity = Math.min(700, p.popularity + Math.floor(Math.random() * 90));
+        p.value = World.estimateValue(p);
+      });
+    });
+
+    // 一些挂售地块
+    [[14, 8], [21, 14], [25, 10]].forEach(([x, y], i) => {
+      const p = World.plotAt(x, y);
+      if (!p) return;
+      p.minted = true; p.owner = ['alice', 'bob', 'dave'][i]; p.listed = true;
+      p.price = 1800 + i * 900;
+      p.value = World.estimateValue(p);
+      S.mintedCount += 1;
+    });
+  }
+
+  function seedTxHistory() {
+    const samples = [
+      ['alice', '建造', '零售商店 → 地块(11,9)', 700, 'ARK'],
+      ['bob', '生产', '矿场产出结算', 55, 'ARK'],
+      ['carol', '租赁', '场地日租收款', 90, 'ARK'],
+      ['dave', '建造', '灯塔 → 地块(8,15)', 1500, 'ARK'],
+    ];
+    samples.forEach((s, i) => {
+      const acc = Chain.acct(s[0]);
+      Chain.send({
+        from: acc.addr, method: s[1], args: [s[2]], value: 0,
+        exec: () => ({ ok: true }),
+      });
+      const tx = Chain.txs[0];
+      if (tx) { tx.note = s[2]; tx.amount = s[3]; tx.symbol = s[4]; tx.status = 'success'; tx.blockNumber = Chain.blockNumber - i; }
+    });
+  }
+
+  // ================= 核心：链上结算 =================
+
+  /** 购买土地 */
+  function buyLand(p) {
+    const me = Chain.acct('me');
+    const price = p.price || World.estimateValue(p);
+    const tax = Math.round(price * World.ECON.TRADE_TAX);
+
+    if (!p.minted) {
+      // 创世领取：需要支付铸造费
+      const mintFee = Math.round(World.estimateValue(p) * 0.4);
+      if (me.ark < mintFee) return toast('err', '余额不足', `需要 ${mintFee} ARK`);
+
+      const r = Chain.send({
+        from: me.addr, to: '0xMetaArk…Land', method: 'mintLand', value: mintFee,
+        args: [`地块(${p.x},${p.y})`, `地形：${World.TERRAIN[p.terrain].n}`, `费率 ${mintFee} ARK`],
+        exec: ({ from }) => {
+          if (from.ark < mintFee) return { err: 'ARK 余额不足' };
+          from.ark -= mintFee;
+          // 铸造费 5% 焚烧
+          const burn = Math.round(mintFee * World.ECON.BURN_RATE);
+          S.arkSupply -= burn; S.arkBurned += burn;
+          S.protoFee += mintFee - burn;
+          p.minted = true; p.owner = 'me';
+          S.mintedCount += 1;
+          Chain.pushLog({ ev: 'LandMinted', land: `(${p.x},${p.y})`, to: me.addr, burn });
+          return { note: `铸造地块(${p.x},${p.y})，焚烧 ${burn} ARK`, amount: mintFee, symbol: 'ARK' };
+        },
+      });
+      if (!r.ok) return toast('err', '交易失败', r.err);
+      toast('ok', '创世地块已铸造', `地块(${p.x},${p.y}) 已上链，焚烧 ${Math.round(mintFee * 0.05)} ARK`);
+    } else {
+      // 二级市场购买
+      const total = price + tax;
+      if (me.ark < total) return toast('err', '余额不足', `需要 ${total} ARK（含 3% 税）`);
+      const seller = Chain.acct(p.owner);
+
+      const r = Chain.send({
+        from: me.addr, to: '0xMetaArk…Market', method: 'buyLand',
+        args: [`地块(${p.x},${p.y})`, `地价 ${price} + 税 ${tax} ARK`],
+        exec: ({ from }) => {
+          if (from.ark < total) return { err: 'ARK 余额不足' };
+          from.ark -= total;
+          if (seller) seller.ark += price;
+          S.arkSupply -= tax; S.arkBurned += tax;   // 税进燃烧池
+          S.tradeTax += tax; S.tradeVolume += price;
+          p.owner = 'me'; p.listed = false; p.price = 0;
+          Chain.pushLog({ ev: 'LandSold', land: `(${p.x},${p.y})`, to: me.addr, price, tax });
+          return { note: `购入地块(${p.x},${p.y})，含 3% 交易税 ${tax} ARK`, amount: total, symbol: 'ARK' };
+        },
+      });
+      if (!r.ok) return toast('err', '交易失败', r.err);
+      toast('ok', '土地成交', `已购入地块(${p.x},${p.y})，交易税 ${tax} ARK 进入燃烧池`);
+    }
+    refreshAll();
+    if (selected === p) onSelectPlot(p);
+  }
+
+  /** 建造 */
+  function buildOn(p, typeId) {
+    const me = Chain.acct('me');
+    const def = World.typeDef(typeId);
+    if (p.owner !== 'me') return toast('err', '无权建造', '请先购买该地块');
+    if (p.buildings.length >= p.slots) return toast('err', '槽位已满', `该地块仅 ${p.slots} 个建筑槽位`);
+    if (p.buildings.some((b) => b.typeId === typeId)) return toast('warn', '已建造', '同类建筑请使用升级');
+
+    const cost = def.cost;
+    if (me.ark < cost) return toast('err', '余额不足', `需要 ${cost} ARK`);
+
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Building', method: 'build', args: [def.n, `地块(${p.x},${p.y})`],
+      exec: ({ from }) => {
+        if (from.ark < cost) return { err: 'ARK 余额不足' };
+        from.ark -= cost;
+        const burn = Math.round(cost * World.ECON.BURN_RATE);
+        S.arkSupply -= burn; S.arkBurned += burn;
+        S.protoFee += cost - burn;
+        p.buildings.push({ typeId, level: 1, lastMaint: Date.now() });
+        p.popularity = Math.min(1000, p.popularity + def.pop);
+        p.value = World.estimateValue(p);
+        Chain.pushLog({ ev: 'Built', land: `(${p.x},${p.y})`, building: def.n, burn });
+        return { note: `建造${def.n}，焚烧 ${burn} ARK（5%）`, amount: cost, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', `${def.n} 建造成功`, `消耗 ${cost} ARK，其中 ${Math.round(cost * 0.05)} ARK 焚烧`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 升级 */
+  function upgradeOn(p, typeId) {
+    const me = Chain.acct('me');
+    const b = p.buildings.find((x) => x.typeId === typeId);
+    const def = World.typeDef(typeId);
+    if (!b) return toast('err', '尚未建造', '请先建造该建筑');
+    if (b.level >= def.maxLv) return toast('warn', `${def.n} 已满级`, `最高 ${def.maxLv} 级`);
+
+    const cost = World.upgradeCost(typeId, b.level);
+    if (me.ark < cost) return toast('err', '余额不足', `需要 ${cost} ARK`);
+
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Building', method: 'upgrade',
+      args: [`${def.n} Lv${b.level}→Lv${b.level + 1}`, `地块(${p.x},${p.y})`],
+      exec: ({ from }) => {
+        if (from.ark < cost) return { err: 'ARK 余额不足' };
+        from.ark -= cost;
+        const burn = Math.round(cost * World.ECON.BURN_RATE);
+        S.arkSupply -= burn; S.arkBurned += burn;
+        S.protoFee += cost - burn;
+        b.level += 1;
+        b.lastMaint = Date.now();
+        p.popularity = Math.min(1000, p.popularity + Math.floor(def.pop / 2));
+        p.value = World.estimateValue(p);
+        Chain.pushLog({ ev: 'Upgraded', land: `(${p.x},${p.y})`, building: def.n, level: b.level, burn });
+        return { note: `${def.n} 升至 Lv${b.level}，焚烧 ${burn} ARK`, amount: cost, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', `升级成功 Lv${b.level}`, `产出提升至 ${World.effectiveYield(p, b).toFixed(1)} ARK/日`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 维护 */
+  function maintainOn(p, typeId) {
+    const me = Chain.acct('me');
+    const b = p.buildings.find((x) => x.typeId === typeId);
+    const def = World.typeDef(typeId);
+    if (!b) return;
+    const cost = World.maintenanceCost(typeId, b.level);
+    if (me.ark < cost) return toast('err', '余额不足', `需要 ${cost} ARK`);
+
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Building', method: 'maintain',
+      args: [`${def.n} 维护`, `消耗 ${cost} ARK`],
+      exec: ({ from }) => {
+        if (from.ark < cost) return { err: 'ARK 余额不足' };
+        from.ark -= cost;
+        S.protoFee += cost;
+        b.lastMaint = Date.now();
+        Chain.pushLog({ ev: 'Maintained', land: `(${p.x},${p.y})`, building: def.n });
+        return { note: `${def.n} 维护完成，产出恢复`, amount: cost, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', '维护完成', `${def.n} 产出已完全恢复`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 挂租 */
+  function setRent(p, daily, monthly) {
+    const me = Chain.acct('me');
+    if (p.owner !== 'me') return toast('err', '无权操作', '只有地主可以设置租金');
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Land', method: 'setRent',
+      args: [`地块(${p.x},${p.y})`, `日租 ${daily} / 月租 ${monthly} ARK`],
+      exec: () => {
+        p.dailyRent = daily; p.monthlyRent = monthly;
+        Chain.pushLog({ ev: 'RentConfigured', land: `(${p.x},${p.y})`, daily, monthly });
+        return { note: `设置租金 ${daily} ARK/日`, amount: daily, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', '租金已设置', `日租 ${daily} ARK · 月租 ${monthly} ARK`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 挂售 */
+  function listLand(p, price) {
+    const me = Chain.acct('me');
+    if (p.owner !== 'me') return toast('err', '无权操作', '只有地主可以挂售');
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Market', method: 'listLand',
+      args: [`地块(${p.x},${p.y})`, `挂单价 ${price} ARK`],
+      exec: () => {
+        p.listed = true; p.price = price;
+        Chain.pushLog({ ev: 'Listed', land: `(${p.x},${p.y})`, price });
+        return { note: `挂单 ${price} ARK`, amount: price, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', '已挂单', `地块(${p.x},${p.y}) 以 ${price} ARK 挂售`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 租用他人土地（消费场景） */
+  function rentFrom(p, monthly) {
+    const me = Chain.acct('me');
+    const landlord = Chain.acct(p.owner);
+    const amount = monthly ? p.monthlyRent : p.dailyRent;
+    if (!amount) return toast('err', '不可租用', '该地块未设置租金');
+    if (p.owner === 'me') return toast('err', '无法自租', '地主不能租用自己的地块');
+    if (me.ark < amount) return toast('err', '余额不足', `需要 ${amount} ARK`);
+
+    const landlordAmt = Math.round(amount * World.ECON.LANDLORD_SHARE);
+    const protocolAmt = amount - landlordAmt;
+
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Market', method: 'rentLand',
+      args: [monthly ? '月租' : '日租', `地块(${p.x},${p.y}) 地主 ${p.owner}`],
+      exec: ({ from }) => {
+        if (from.ark < amount) return { err: 'ARK 余额不足' };
+        from.ark -= amount;
+        if (landlord) landlord.ark += landlordAmt;
+        S.protoFee += protocolAmt;
+        S.rentVolume += amount;
+        p.renter = 'me';
+        Chain.pushLog({ ev: 'RentPaid', land: `(${p.x},${p.y})`, amount, landlordAmt, protocolAmt });
+        return { note: `支付租金 ${amount} ARK，地主得 ${landlordAmt}（90%）`, amount, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', '租赁成功', `${amount} ARK → 地主 ${landlordAmt} / 协议 ${protocolAmt}`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  /** 领取生产产出 */
+  function claimYield(p) {
+    const me = Chain.acct('me');
+    if (p.owner !== 'me') return toast('err', '无权操作', '只有地主可领取产出');
+    const amount = Math.round(World.plotYield(p) * 7); // 结算 7 天
+    if (amount <= 0) return toast('warn', '暂无产出', '该地块没有功能型建筑');
+
+    const r = Chain.send({
+      from: me.addr, to: '0xMetaArk…Building', method: 'claimProduction',
+      args: [`地块(${p.x},${p.y})`, `结算 7 日产出`],
+      exec: ({ from }) => {
+        from.ark += amount;
+        from.materials = from.materials || {};
+        from.materials[7] = (from.materials[7] || 0) + 3;   // 木材
+        from.materials[8] = (from.materials[8] || 0) + 2;   // 矿石
+        Chain.pushLog({ ev: 'MaterialClaimed', land: `(${p.x},${p.y})`, amount });
+        return { note: `领取 7 日产出 + 材料（木材x3 矿石x2）`, amount, symbol: 'ARK' };
+      },
+    });
+    if (!r.ok) return toast('err', '交易失败', r.err);
+    toast('ok', '产出已领取', `+${amount} ARK，并发放材料木材x3 矿石x2`);
+    refreshAll();
+    onSelectPlot(p);
+  }
+
+  function onSelectPlot(p) {
+    selected = p;
+    Renderer.select(p);
+    renderDetail(p);
+  }
+
+  // ================= 渲染：地块详情 =================
+  function renderDetail(p) {
+    const el = document.getElementById('landDetail');
+    if (!p) {
+      el.innerHTML = `<div class="land-empty"><div class="big">🗺️</div>点击地图上的任意地块<br>查看详情并开始经营</div>`;
+      return;
+    }
+    const ownerName = p.owner ? (p.owner === 'me' ? '我' : Chain.acct(p.owner).label) : '未铸造';
+    const isMine = p.owner === 'me';
+    const val = World.estimateValue(p);
+    const yld = World.plotYield(p);
+    const popPct = Math.min(100, (p.popularity / 700) * 100);
+
+    let actions = '';
+    if (!p.minted) {
+      const fee = Math.round(val * 0.4);
+      actions = `<button class="btn pri full" onclick="App.buyLand(App.sel())">🏛️ 铸造创世地块 · ${fee} ARK</button>`;
+    } else if (!p.owner) {
+      actions = `<button class="btn pri full" onclick="App.buyLand(App.sel())">💰 购买该地块</button>`;
+    } else if (isMine) {
+      actions = `
+        <div class="flex" style="gap:8px;flex-wrap:wrap">
+          <button class="btn pri sm" onclick="App.openBuild()">🔨 建造</button>
+          <button class="btn cy sm" onclick="App.openRent()">📋 挂租</button>
+          <button class="btn sm" onclick="App.openList()">🏷️ 挂售</button>
+          <button class="btn sm" onclick="App.claimYield(App.sel())">📦 领取产出</button>
+        </div>`;
+    } else {
+      const dr = p.dailyRent || 0;
+      actions = dr
+        ? `<div class="flex" style="gap:8px">
+             <button class="btn cy sm" onclick="App.rentFrom(App.sel(),false)">🏠 日租 ${dr} ARK</button>
+             <button class="btn sm" onclick="App.rentFrom(App.sel(),true)">📅 月租 ${p.monthlyRent} ARK</button>
+           </div>`
+        : `<div class="muted" style="font-size:12.5px">该地块暂未开放租赁</div>`;
+    }
+
+    const bl = p.buildings.length
+      ? p.buildings.map((b) => {
+          const def = World.typeDef(b.typeId);
+          const ye = World.effectiveYield(p, b);
+          const decayed = b.lastMaint && Date.now() - b.lastMaint > 30 * 24 * 3600 * 1000;
+          return `<div class="kv"><span class="k">${def.ico} ${def.n}</span>
+            <span class="v">Lv${b.level}${ye ? ` · ${ye.toFixed(1)} ARK/日` : ' · 装饰'}</span></div>`;
+        }).join('')
+      : `<div class="muted" style="font-size:12.5px;padding:8px 0">尚无建筑，${isMine ? '点击「建造」开始开发' : '地主尚未开发'}</div>`;
+
+    el.innerHTML = `
+      <div class="card-h">
+        <div>
+          <h3>地块 (${p.x}, ${p.y})</h3>
+          <div class="sub">${World.LAND_TYPE[p.type].n} · ${World.TERRAIN[p.terrain].n} · 稀有度 ${World.LAND_TYPE[p.type].rar}x</div>
+        </div>
+        <span class="pill ${isMine ? 'warn' : p.owner ? 'info' : 'ok'}">${ownerName}</span>
+      </div>
+      <div class="card-b">
+        <div class="kv"><span class="k">人气值</span><span class="v" style="color:var(--ark)">${p.popularity}</span></div>
+        <div class="bar"><i style="width:${popPct}%;background:linear-gradient(90deg,var(--ark),#ff6b35)"></i></div>
+        <div class="kv" style="margin-top:10px"><span class="k">建筑槽位</span><span class="v">${p.buildings.length} / ${p.slots}</span></div>
+        <div class="bar"><i style="width:${(p.buildings.length / p.slots) * 100}%;background:var(--accent)"></i></div>
+        <div class="kv" style="margin-top:10px"><span class="k">估值</span><span class="v" style="color:var(--ark)">${Chain.fmtInt(val)} ARK</span></div>
+        <div class="kv"><span class="k">日产出</span><span class="v" style="color:var(--up)">${yld.toFixed(1)} ARK</span></div>
+        ${p.dailyRent ? `<div class="kv"><span class="k">租金</span><span class="v">${p.dailyRent}/日 · ${p.monthlyRent}/月</span></div>` : ''}
+        ${p.listed ? `<div class="kv"><span class="k">挂售价</span><span class="v" style="color:var(--meta)">${Chain.fmtInt(p.price)} ARK</span></div>` : ''}
+        ${p.renter ? `<div class="kv"><span class="k">当前租客</span><span class="v">${p.renter === 'me' ? '我' : p.renter}</span></div>` : ''}
+        <div style="margin:14px 0 8px;font-size:12px;color:var(--txt-2)">建筑列表</div>
+        ${bl}
+        <div style="margin-top:15px">${actions}</div>
+      </div>`;
+  }
+
+  // ================= 渲染：经济看板 =================
+  function renderDashboard() {
+    const st = World.stats();
+    const me = Chain.acct('me');
+
+    set('statArk', Chain.fmtInt(Math.round(S.arkSupply)));
+    set('statBurned', Chain.fmtInt(Math.round(S.arkBurned)));
+    set('statMeta', Chain.fmtInt(Math.round(S.metaSupply)));
+    set('statLands', `${st.minted} / ${S.maxTiles}`);
+    set('statBuilt', st.built);
+    set('statYield', st.dailyYield.toFixed(0));
+
+    set('myArk', Chain.fmtNum(me.ark));
+    set('myMeta', Chain.fmtNum(me.meta));
+    set('myLands', World.tiles.filter((t) => t.owner === 'me').length);
+    set('myYield', World.tiles.filter((t) => t.owner === 'me').reduce((s, t) => s + World.plotYield(t), 0).toFixed(1));
+
+    // 燃烧率
+    const burnRate = S.arkSupply > 0 ? (S.arkBurned / (S.arkSupply + S.arkBurned)) * 100 : 0;
+    set('burnRate', burnRate.toFixed(2) + '%');
+    set('protoFee', Chain.fmtInt(Math.round(S.protoFee)));
+    set('rentVol', Chain.fmtInt(Math.round(S.rentVolume)));
+    set('tradeVol', Chain.fmtInt(Math.round(S.tradeVolume)));
+
+    renderEconomyChart();
+    renderSectors();
+    renderTxFeed();
+    renderHoldings();
+    renderBlocks();
+    renderLogs();
+    renderMinterList();
+  }
+
+  /** 双币供应量曲线 */
+  function renderEconomyChart() {
+    const cv = document.getElementById('econChart');
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.parentElement.clientWidth, H = 210;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = '100%'; cv.style.height = H + 'px';
+    const c = cv.getContext('2d');
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, W, H);
+
+    const pad = { l: 46, r: 12, t: 14, b: 22 };
+    const cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+
+    // 追加当前值
+    const arkSeries = S.hist.ark.slice(-27).concat(Math.round(S.arkSupply));
+    const burnSeries = S.hist.burned.slice(-27).concat(Math.round(S.arkBurned));
+
+    const maxArk = Math.max(...arkSeries) * 1.02;
+    const minArk = Math.min(...arkSeries) * 0.98;
+    const maxBurn = Math.max(...burnSeries) * 1.15 || 1;
+
+    // 网格
+    c.strokeStyle = '#1a2540'; c.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.t + (ch / 4) * i;
+      c.beginPath(); c.moveTo(pad.l, y); c.lineTo(W - pad.r, y); c.stroke();
+      c.fillStyle = '#5f7093'; c.font = '10px ui-monospace, monospace'; c.textAlign = 'right';
+      c.fillText(Chain.fmtInt(Math.round(maxArk - ((maxArk - minArk) / 4) * i)), pad.l - 7, y + 3);
+    }
+
+    const px = (i) => pad.l + (cw / (arkSeries.length - 1)) * i;
+
+    // $ARK 面积
+    const grad = c.createLinearGradient(0, pad.t, 0, pad.t + ch);
+    grad.addColorStop(0, 'rgba(255,176,32,0.34)');
+    grad.addColorStop(1, 'rgba(255,176,32,0.01)');
+    c.beginPath();
+    arkSeries.forEach((v, i) => {
+      const y = pad.t + ch - ((v - minArk) / (maxArk - minArk)) * ch;
+      i === 0 ? c.moveTo(px(i), y) : c.lineTo(px(i), y);
+    });
+    c.lineTo(px(arkSeries.length - 1), pad.t + ch);
+    c.lineTo(px(0), pad.t + ch);
+    c.closePath();
+    c.fillStyle = grad; c.fill();
+
+    c.beginPath();
+    arkSeries.forEach((v, i) => {
+      const y = pad.t + ch - ((v - minArk) / (maxArk - minArk)) * ch;
+      i === 0 ? c.moveTo(px(i), y) : c.lineTo(px(i), y);
+    });
+    c.strokeStyle = '#ffb020'; c.lineWidth = 2; c.stroke();
+
+    // 燃烧量线
+    c.beginPath();
+    burnSeries.forEach((v, i) => {
+      const y = pad.t + ch - (v / maxBurn) * ch * 0.82;
+      i === 0 ? c.moveTo(px(i), y) : c.lineTo(px(i), y);
+    });
+    c.strokeStyle = '#ff6b35'; c.lineWidth = 1.6; c.setLineDash([4, 3]); c.stroke();
+    c.setLineDash([]);
+
+    // 当前点
+    const lx = px(arkSeries.length - 1), ly = pad.t + ch - ((arkSeries[arkSeries.length - 1] - minArk) / (maxArk - minArk)) * ch;
+    c.beginPath(); c.arc(lx, ly, 4, 0, 7); c.fillStyle = '#ffb020'; c.fill();
+    c.strokeStyle = '#0c1220'; c.lineWidth = 2; c.stroke();
+
+    // 图例
+    c.font = '10.5px system-ui'; c.textAlign = 'left';
+    c.fillStyle = '#ffb020'; c.fillRect(pad.l, 4, 9, 3);
+    c.fillStyle = '#9aabc9'; c.fillText('$ARK 流通量', pad.l + 14, 7.5);
+    c.fillStyle = '#ff6b35'; c.fillRect(pad.l + 96, 4, 9, 3);
+    c.fillStyle = '#9aabc9'; c.fillText('累计燃烧', pad.l + 110, 7.5);
+  }
+
+  /** 产业分布 */
+  function renderSectors() {
+    const el = document.getElementById('sectors');
+    if (!el) return;
+    const counts = {};
+    World.tiles.forEach((p) => p.buildings.forEach((b) => {
+      counts[b.typeId] = (counts[b.typeId] || 0) + 1;
+    }));
+    const total = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+    const rows = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, n]) => {
+        const def = World.typeDef(Number(id));
+        const pct = (n / total) * 100;
+        return `<div style="margin-bottom:11px">
+          <div class="between" style="font-size:12.5px;margin-bottom:4px">
+            <span>${def.ico} ${def.n}</span>
+            <span class="mono" style="color:var(--txt-2)">${n} 座 · ${pct.toFixed(0)}%</span>
+          </div>
+          <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--meta))"></i></div>
+        </div>`;
+      }).join('');
+    el.innerHTML = rows || '<div class="empty">暂无建筑</div>';
+  }
+
+  /** 交易流水 */
+  function renderTxFeed() {
+    const el = document.getElementById('txFeed');
+    if (!el) return;
+    const IconFor = { 购买: '🏛️', 建造: '🔨', 升级: '⬆️', 租赁: '🏠', 挂租: '📋', 挂售: '🏷️', 生产: '📦', 维护: '🔧', 铸造: '✨' };
+    const ColorFor = { 购买: '#ffb020', 建造: '#6c8cff', 升级: '#26d0ce', 租赁: '#3ddc97', 挂租: '#6c8cff', 挂售: '#26d0ce', 生产: '#3ddc97', 维护: '#ff6b35', 铸造: '#ffb020' };
+
+    const rows = Chain.txs.slice(0, 24).map((t) => {
+      const col = ColorFor[t.method] || '#6c8cff';
+      const ico = IconFor[t.method] || '📄';
+      const st = t.status === 'failed' ? '<span class="pill err">失败</span>' : '<span class="pill ok">成功</span>';
+      return `<div class="txrow">
+        <div class="ic" style="background:${col}22;color:${col}">${ico}</div>
+        <div class="bd">
+          <div class="t1">${t.method}${t.note ? ' · ' + t.note : ''}</div>
+          <div class="t2">${Chain.short(t.hash, 5)} · blk ${t.blockNumber || '—'} · ${Chain.timeAgo(t.timestamp)}</div>
+        </div>
+        <div class="amt" style="color:${t.symbol === 'ARK' ? 'var(--ark)' : 'var(--meta)'}">
+          ${t.amount ? Chain.fmtInt(t.amount) + ' ' + t.symbol : ''}
+          <span class="x">${st}</span>
+        </div>
+      </div>`;
+    }).join('');
+    el.innerHTML = rows || '<div class="empty">暂无交易</div>';
+  }
+
+  /** 我的资产 */
+  function renderHoldings() {
+    const el = document.getElementById('holdings');
+    if (!el) return;
+    const mine = World.tiles.filter((t) => t.owner === 'me');
+    if (!mine.length) {
+      el.innerHTML = '<div class="empty">你还没有土地<br><span class="muted">点击地图上未被铸造的地块开始</span></div>';
+      return;
+    }
+    el.innerHTML = mine.map((p) => {
+      const val = World.estimateValue(p);
+      const yld = World.plotYield(p);
+      return `<div class="kv" style="cursor:pointer" onclick="App.focus(${p.x},${p.y})">
+        <span class="k">地块(${p.x},${p.y}) ${World.TERRAIN[p.terrain].ico}
+          ${p.listed ? '<span class="pill info" style="margin-left:6px">挂售中</span>' : ''}
+          ${p.renter ? '<span class="pill warn" style="margin-left:6px">已出租</span>' : ''}
+        </span>
+        <span class="v">${Chain.fmtInt(val)} ARK · ${yld.toFixed(0)}/日</span>
+      </div>`;
+    }).join('');
+  }
+
+  /** 区块列表 */
+  function renderBlocks() {
+    const el = document.getElementById('blockList');
+    if (!el) return;
+    const rows = Chain.blocks.slice(-14).reverse().map((b) => `
+      <tr>
+        <td style="color:var(--meta)">#${Chain.fmtInt(b.number)}</td>
+        <td class="muted">${Chain.short(b.hash, 6)}</td>
+        <td>${b.txCount}</td>
+        <td class="muted">${Chain.fmtInt(b.gasUsed)}</td>
+        <td class="muted">${b.size} B</td>
+        <td class="muted nowrap">${new Date(b.timestamp * 1000).toLocaleTimeString('zh-CN')}</td>
+      </tr>`).join('');
+    el.innerHTML = rows || '<tr><td colspan="6" class="empty">等待出块…</td></tr>';
+  }
+
+  /** 事件日志 */
+  function renderLogs() {
+    const el = document.getElementById('logList');
+    if (!el) return;
+    const evColor = { LandMinted: '#ffb020', Built: '#6c8cff', Upgraded: '#26d0ce', LandSold: '#3ddc97',
+      RentPaid: '#3ddc97', RentConfigured: '#6c8cff', Listed: '#26d0ce', Maintained: '#ff6b35', MaterialClaimed: '#3ddc97' };
+    const rows = Chain.logs.slice(0, 26).map((l) => `
+      <div class="txrow">
+        <div class="ic" style="background:${(evColor[l.ev] || '#6c8cff')}22;color:${evColor[l.ev] || '#6c8cff'};font-size:10px">◈</div>
+        <div class="bd">
+          <div class="t1" style="font-family:var(--mono);font-size:12px">${l.ev}</div>
+          <div class="t2">${l.land || ''} ${l.building ? '· ' + l.building : ''}${l.burn ? ' · 焚烧 ' + l.burn : ''}${l.amount ? ' · ' + Chain.fmtInt(l.amount) + ' ARK' : ''}${l.price ? ' · ' + Chain.fmtInt(l.price) + ' ARK' : ''}${l.daily ? ' · ' + l.daily + '/日' : ''}</div>
+        </div>
+        <div class="amt"><span class="x">blk ${l.blockNumber}</span></div>
+      </div>`).join('');
+    el.innerHTML = rows || '<div class="empty">暂无链上事件</div>';
+  }
+
+  /** Minter 通胀额度 */
+  function renderMinterList() {
+    const el = document.getElementById('minterList');
+    if (!el) return;
+    const cap = Math.round(S.arkSupply * World.ECON.INFLATION_CAP);
+    const issued = Math.round(cap * 0.62);
+    const pct = (issued / cap) * 100;
+    el.innerHTML = `
+      <div class="kv"><span class="k">年度通胀上限</span><span class="v">${Chain.fmtInt(cap)} ARK</span></div>
+      <div class="bar"><i style="width:${pct}%;background:linear-gradient(90deg,var(--up),var(--ark))"></i></div>
+      <div class="kv" style="margin-top:9px"><span class="k">本周期已增发</span><span class="v">${Chain.fmtInt(issued)} ARK</span></div>
+      <div class="kv"><span class="k">剩余额度</span><span class="v" style="color:var(--up)">${Chain.fmtInt(cap - issued)} ARK</span></div>
+      <div class="kv"><span class="k">授权 Minter</span><span class="v">2 个</span></div>
+      <div style="margin-top:11px;font-size:12px;color:var(--txt-2);line-height:1.7">
+        仅 <code>BuildingNFT</code> 与任务系统可增发，<br>单笔超额将被 <code>inflation cap exceeded</code> 拦截。
+      </div>`;
+  }
+
+  // ================= 刷新 =================
+  function refreshAll() {
+    renderDashboard();
+    Renderer.redraw();
+    if (selected) renderDetail(selected);
+    updateWallet();
+  }
+
+  function updateWallet() {
+    const me = Chain.acct('me');
+    set('wArk', Chain.fmtNum(me.ark, 0));
+    set('wMeta', Chain.fmtNum(me.meta, 0));
+    set('wEth', me.eth.toFixed(3));
+    set('wBlock', Chain.fmtInt(Chain.blockNumber));
+  }
+
+  function set(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+
+  // ================= 交互 =================
+  function bindUI() {
+    // 导航
+    document.querySelectorAll('.nav button').forEach((b) => {
+      b.onclick = () => {
+        document.querySelectorAll('.nav button').forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+        document.querySelectorAll('.page').forEach((p) => p.classList.remove('on'));
+        document.getElementById('page-' + b.dataset.p).classList.add('on');
+        if (b.dataset.p === 'economy') setTimeout(renderEconomyChart, 30);
+      };
+    });
+
+    // 地图筛选
+    document.querySelectorAll('.chip[data-f]').forEach((c) => {
+      c.onclick = () => {
+        document.querySelectorAll('.chip[data-f]').forEach((x) => x.classList.remove('on'));
+        c.classList.add('on');
+        Renderer.setFilter(c.dataset.f);
+      };
+    });
+
+    // 热力图
+    const hb = document.getElementById('heatToggle');
+    if (hb) hb.onclick = () => {
+      const on = !hb.classList.contains('on');
+      hb.classList.toggle('on', on);
+      Renderer.setHeat(on);
+    };
+
+    // 模态关闭
+    document.querySelectorAll('[data-close]').forEach((b) => { b.onclick = closeModal; });
+    document.getElementById('mask').onclick = (e) => { if (e.target.id === 'mask') closeModal(); };
+
+    // 链事件
+    Chain.on('tx', () => { renderTxFeed(); renderLogs(); });
+    Chain.on('block', () => { renderBlocks(); updateWallet(); });
+    Chain.on('log', renderLogs);
+
+    // 周期性刷新交易时间显示
+    setInterval(() => { renderTxFeed(); renderBlocks(); updateWallet(); }, 15000);
+
+    // 懒出块：模拟持续链上活动
+    setInterval(() => {
+      if (Math.random() > 0.72) Chain.mineBlock();
+    }, 9000);
+
+    // 自动涨落的代币供应（模拟生产铸币）
+    setInterval(() => {
+      const inc = Math.round(60 + Math.random() * 220);
+      S.arkSupply += inc;
+      S.protoFee += Math.round(inc * 0.08);
+      renderDashboard();
+    }, 8000);
+  }
+
+  // ---------- 模态 ----------
+  function openModal(title, bodyHtml, footerHtml) {
+    document.getElementById('mTitle').textContent = title;
+    document.getElementById('mBody').innerHTML = bodyHtml;
+    document.getElementById('mFoot').innerHTML = footerHtml || '';
+    document.getElementById('mask').classList.add('on');
+  }
+  function closeModal() { document.getElementById('mask').classList.remove('on'); if (sel()) onSelectPlot(sel()); }
+
+  /** 建造模态 */
+  function openBuild() {
+    const p = selected;
+    if (!p || p.owner !== 'me') return toast('err', '请先选择自己的地块');
+    const me = Chain.acct('me');
+    const free = p.slots - p.buildings.length;
+    const items = World.BUILDINGS.map((b) => {
+      const owned = p.buildings.some((x) => x.typeId === b.id);
+      const afford = me.ark >= b.cost;
+      return `<div class="bitem ${owned ? 'sel' : ''}" ${owned || !afford ? '' : `onclick="App.pickBuild(${b.id})"`}
+        style="${owned ? 'opacity:.5' : (!afford ? 'opacity:.42' : '')};margin-bottom:7px">
+        <div class="ico">${b.ico}</div>
+        <div style="flex:1">
+          <div class="nm">${b.n} <span class="muted" style="font-size:11px">${b.kind}</span></div>
+          <div class="cs">${b.cost} ARK · 产量 ${b.yield}/日 · 人气 +${b.pop}${owned ? ' · 已建造' : ''}${!afford ? ' · 余额不足' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    openModal(`🔨 建造 · 地块(${p.x},${p.y})`,
+      `<div class="hint mb14">剩余槽位 <b style="color:var(--ark)">${free}</b> / ${p.slots} · 你的余额 <b class="c-ark">${Chain.fmtNum(me.ark, 0)} ARK</b>
+        <br>建造将焚烧 5% 作为通缩，其余进入协议金库。</div>${items}`,
+      `<button class="btn" onclick="App.closeModal()">取消</button>`);
+  }
+
+  function pickBuild(typeId) {
+    buildPick = typeId;
+    closeModal();
+    buildOn(selected, typeId);
+  }
+
+  /** 挂租模态 */
+  function openRent() {
+    const p = selected;
+    if (!p || p.owner !== 'me') return toast('err', '请先选择自己的地块');
+    const val = World.estimateValue(p);
+    const d = p.dailyRent || Math.max(20, Math.round(val * 0.03));
+    const m = p.monthlyRent || d * 25;
+    openModal(`📋 设置租金 · 地块(${p.x},${p.y})`,
+      `<div class="hint mb14">租客支付的租金按 <b>地主 90% / 协议 10%</b> 自动分账，协议份额进入燃烧池。</div>
+       <div class="row2">
+         <div class="field"><label>日租金（ARK）</label><input id="inRentD" type="number" value="${d}" min="1"></div>
+         <div class="field"><label>月租金（ARK）</label><input id="inRentM" type="number" value="${m}" min="1"></div>
+       </div>
+       <div class="hint">建议日租 ≈ 估值的 3%（当前估值 ${Chain.fmtInt(val)} ARK）</div>`,
+      `<button class="btn" onclick="App.closeModal()">取消</button>
+       <button class="btn cy" onclick="App.doRent()">确认挂租</button>`);
+  }
+  function doRent() {
+    const d = Number(document.getElementById('inRentD').value);
+    const m = Number(document.getElementById('inRentM').value);
+    if (!(d > 0) || !(m > 0)) return toast('err', '请输入有效租金');
+    closeModal();
+    setRent(selected, Math.round(d), Math.round(m));
+  }
+
+  /** 挂售模态 */
+  function openList() {
+    const p = selected;
+    if (!p || p.owner !== 'me') return toast('err', '请先选择自己的地块');
+    const val = World.estimateValue(p);
+    openModal(`🏷️ 挂售 · 地块(${p.x},${p.y})`,
+      `<div class="hint mb14">成交时买方额外支付 <b>3% 交易税</b>，直接进入燃烧池。</div>
+       <div class="field"><label>挂售价格（ARK）</label><input id="inPrice" type="number" value="${Math.round(val * 1.2)}" min="1"></div>
+       <div class="hint">当前估值 ${Chain.fmtInt(val)} ARK · 建议溢价 10%~30%</div>`,
+      `<button class="btn" onclick="App.closeModal()">取消</button>
+       <button class="btn pri" onclick="App.doList()">确认挂售</button>`);
+  }
+  function doList() {
+    const v = Number(document.getElementById('inPrice').value);
+    if (!(v > 0)) return toast('err', '请输入有效价格');
+    closeModal();
+    listLand(selected, Math.round(v));
+  }
+
+  // ---------- Toast ----------
+  function toast(type, title, msg) {
+    const box = document.getElementById('toasts');
+    const ico = { ok: '✅', err: '⛔', warn: '⚠️' }[type] || 'ℹ️';
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.innerHTML = `<span class="ti">${ico}</span><div><div style="font-weight:600">${title}</div>${msg ? `<div class="muted" style="font-size:12px">${msg}</div>` : ''}</div>`;
+    box.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 320); }, 4200);
+  }
+
+  function focus(x, y) {
+    const p = World.plotAt(x, y);
+    if (!p) return;
+    selected = p; Renderer.select(p); onSelectPlot(p);
+    document.querySelector('[data-p="world"]').click();
+    document.getElementById('mapCanvas').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  return {
+    boot, refreshAll, buyLand, onSelectPlot, closeModal,
+    openBuild, openRent, openList, pickBuild, doRent, doList,
+    rentFrom, claimYield, focus,
+    buildOn, upgradeOn, maintainOn, setRent, listLand,
+    sel: () => selected,
+    state: S,
+  };
+})();
+
+window.addEventListener('DOMContentLoaded', App.boot);
+
+</script>
+<script>window.__SOL_SOURCES__ = {"ArkToken": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title ArkToken —— $ARK 效用币\n * @notice 元界方舟的效用型代币，无限总量但严格控产出。\n *\n * 产出场景：生产经营、每日任务、地块出租、活动奖励\n * 消耗场景：建造、升级、维修、购买材料、进入副本\n * 通缩机制：建造焚烧 5%、交易税 3%、废弃建筑回收\n *\n * 关键设计：只有被授权的 Minter（生产合约 / 任务合约）能增发，\n * 且存在全局通胀率上限，防止经济失控。\n */\ncontract ArkToken {\n    string public name = \"MetaArk Utility Token\";\n    string public symbol = \"ARK\";\n    uint8 public constant decimals = 18;\n\n    uint256 public totalSupply;\n    uint256 public totalBurned;\n\n    address public owner;\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n\n    /// @notice 被授权可以增发的地址（生产合约、任务系统）\n    mapping(address => bool) public minters;\n\n    /// @notice 全局通胀上限：每年最多增发总量的一定比例（基点，300 = 3%）\n    uint256 public annualInflationCapBps = 300;\n    uint256 public lastInflationEpoch;\n    uint256 public inflationThisEpoch;\n\n    /// @notice 燃烧池地址（协议抽成汇聚地）\n    address public burnPool;\n\n    event Transfer(address indexed from, address indexed to, uint256 value);\n    event Approval(address indexed owner, address indexed spender, uint256 value);\n    event Mint(address indexed to, uint256 amount, string reason);\n    event Burn(address indexed from, uint256 amount, string reason);\n    event MinterUpdated(address indexed minter, bool allowed);\n    event InflationCapUpdated(uint256 bps);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"ARK: not owner\");\n        _;\n    }\n\n    modifier onlyMinter() {\n        require(minters[msg.sender], \"ARK: not minter\");\n        _;\n    }\n\n    constructor(uint256 initialSupply) {\n        owner = msg.sender;\n        burnPool = msg.sender;\n        minters[msg.sender] = true;\n        lastInflationEpoch = block.timestamp;\n        _mint(msg.sender, initialSupply, \"genesis\");\n    }\n\n    // ---------------------------------------------------------------\n    // ERC-20 基础\n    // ---------------------------------------------------------------\n\n    function transfer(address to, uint256 amount) external returns (bool) {\n        _transfer(msg.sender, to, amount);\n        return true;\n    }\n\n    function approve(address spender, uint256 amount) external returns (bool) {\n        allowance[msg.sender][spender] = amount;\n        emit Approval(msg.sender, spender, amount);\n        return true;\n    }\n\n    function transferFrom(address from, address to, uint256 amount) external returns (bool) {\n        uint256 allowed = allowance[from][msg.sender];\n        if (allowed != type(uint256).max) {\n            require(allowed >= amount, \"ARK: insufficient allowance\");\n            allowance[from][msg.sender] = allowed - amount;\n        }\n        _transfer(from, to, amount);\n        return true;\n    }\n\n    function _transfer(address from, address to, uint256 amount) internal {\n        require(to != address(0), \"ARK: transfer to zero\");\n        require(balanceOf[from] >= amount, \"ARK: insufficient balance\");\n        unchecked {\n            balanceOf[from] -= amount;\n            balanceOf[to] += amount;\n        }\n        emit Transfer(from, to, amount);\n    }\n\n    // ---------------------------------------------------------------\n    // 增发（受通胀上限约束）\n    // ---------------------------------------------------------------\n\n    /// @notice 铸造新币。调用者必须是 Minter，且不超过当期通胀额度。\n    function mint(address to, uint256 amount, string calldata reason) external onlyMinter returns (bool) {\n        _rollEpoch();\n        uint256 cap = (totalSupply * annualInflationCapBps) / 10000;\n        require(inflationThisEpoch + amount <= cap, \"ARK: inflation cap exceeded\");\n        inflationThisEpoch += amount;\n        _mint(to, amount, reason);\n        return true;\n    }\n\n    function _mint(address to, uint256 amount, string memory reason) internal {\n        require(to != address(0), \"ARK: mint to zero\");\n        totalSupply += amount;\n        balanceOf[to] += amount;\n        emit Transfer(address(0), to, amount);\n        emit Mint(to, amount, reason);\n    }\n\n    function _rollEpoch() internal {\n        if (block.timestamp >= lastInflationEpoch + 365 days) {\n            lastInflationEpoch = block.timestamp;\n            inflationThisEpoch = 0;\n        }\n    }\n\n    // ---------------------------------------------------------------\n    // 通缩：燃烧\n    // ---------------------------------------------------------------\n\n    /// @notice 销毁代币，永久移出流通\n    function burn(uint256 amount, string calldata reason) external returns (bool) {\n        require(balanceOf[msg.sender] >= amount, \"ARK: insufficient balance\");\n        unchecked {\n            balanceOf[msg.sender] -= amount;\n            totalSupply -= amount;\n        }\n        totalBurned += amount;\n        emit Transfer(msg.sender, address(0), amount);\n        emit Burn(msg.sender, amount, reason);\n        return true;\n    }\n\n    /// @notice 从指定地址销毁（需授权），供建造/升级合约扣除焚烧份额\n    function burnFrom(address from, uint256 amount, string calldata reason) external returns (bool) {\n        uint256 allowed = allowance[from][msg.sender];\n        if (from != msg.sender) {\n            require(allowed >= amount, \"ARK: insufficient allowance\");\n            if (allowed != type(uint256).max) {\n                allowance[from][msg.sender] = allowed - amount;\n            }\n        }\n        require(balanceOf[from] >= amount, \"ARK: insufficient balance\");\n        unchecked {\n            balanceOf[from] -= amount;\n            totalSupply -= amount;\n        }\n        totalBurned += amount;\n        emit Transfer(from, address(0), amount);\n        emit Burn(from, amount, reason);\n        return true;\n    }\n\n    // ---------------------------------------------------------------\n    // 协议参数\n    // ---------------------------------------------------------------\n\n    function setMinter(address minter, bool allowed) external onlyOwner {\n        minters[minter] = allowed;\n        emit MinterUpdated(minter, allowed);\n    }\n\n    function setAnnualInflationCap(uint256 bps) external onlyOwner {\n        require(bps <= 2000, \"ARK: cap too high\");\n        annualInflationCapBps = bps;\n        emit InflationCapUpdated(bps);\n    }\n\n    function setBurnPool(address pool) external onlyOwner {\n        require(pool != address(0), \"ARK: zero pool\");\n        burnPool = pool;\n    }\n\n    /// @notice 当前流通量（总供应已在 burn 时扣减，此处语义等同）\n    function circulatingSupply() external view returns (uint256) {\n        return totalSupply;\n    }\n\n    /// @notice 当期剩余可增发额度\n    function remainingInflationQuota() external view returns (uint256) {\n        uint256 cap = (totalSupply * annualInflationCapBps) / 10000;\n        if (block.timestamp >= lastInflationEpoch + 365 days) return cap;\n        return cap > inflationThisEpoch ? cap - inflationThisEpoch : 0;\n    }\n}\n", "BuildingNFT": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title BuildingNFT —— 元界方舟建筑与道具（ERC-1155）\n * @notice 用 ERC-1155 承载建筑与材料，同类型可批量铸造，节省 Gas。\n *\n * 建筑分类：\n *  - 功能型：工坊(WORKSHOP) / 矿场(MINE) / 商店(SHOP) / 农田(FARM) —— 有产出逻辑\n *  - 装饰型：雕像(STATUE) / 灯塔(LIGHTHOUSE) / 乐园(PARK) —— 提升人流与地价\n *  - 材料类：木材 / 矿石 / 能量核 / 设计图 —— 可交易、可合成\n *\n * 核心机制：\n *  1. 建造消耗 $ARK，其中 5% 直接焚烧（通缩）\n *  2. 升级消耗材料 + 代币，等级越高产出/人流越高\n *  3. 维护费：长期不维护会衰败，产出衰减至零\n */\ninterface IArk {\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\n    function burnFrom(address from, uint256 amount, string calldata reason) external returns (bool);\n}\n\ninterface ILand {\n    function consumeSlot(uint256 tokenId) external returns (bool);\n    function adjustPopularity(uint256 tokenId, int32 delta) external returns (uint32);\n    function ownerOf(uint256 tokenId) external view returns (address);\n    function touchMaintenance(uint256 tokenId) external;\n}\n\ncontract BuildingNFT {\n    address public owner;\n    address public arkToken;\n    address public landNFT;\n    /// @notice 被授权的游戏逻辑合约集合\n    mapping(address => bool) public controllers;\n    address public gameController;\n\n    string public name = \"MetaArk Building & Material\";\n\n    /// @notice 协议税率：建造焚烧 5%\n    uint256 public burnRateBps = 500;\n    /// @notice 建筑槽位与土地绑定的记录：tokenId => 土地上建筑类型\n    mapping(uint256 => uint256[]) public landBuildings;\n\n    // ---------------- 建筑类型定义 ----------------\n    enum BuildingKind { Workshop, Mine, Shop, Farm, Statue, Lighthouse, Park, Material }\n\n    struct BuildingType {\n        string name;\n        BuildingKind kind;\n        uint256 buildCostARK;    // 建造消耗 $ARK\n        uint256 baseYieldPerDay; // 每日基础产出（$ARK 等值，仅功能型）\n        uint32 popularityGain;   // 建成时人气加成\n        uint8 maxLevel;          // 最高等级\n        bool isFunctional;       // 是否有产出逻辑\n    }\n\n    BuildingType[] public buildingTypes;\n\n    /// @notice 建筑实例状态：landTokenId => buildingTypeId => level\n    mapping(uint256 => mapping(uint256 => uint8)) public buildingLevel;\n    /// @notice 上次维护时间\n    mapping(uint256 => mapping(uint256 => uint256)) public buildingLastMaint;\n\n    /// @notice ERC-1155 余额：account => id => amount\n    mapping(address => mapping(uint256 => uint256)) public balanceOf;\n    mapping(address => mapping(address => bool)) public operatorApprovals;\n\n    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);\n    event ApprovalForAll(address indexed account, address indexed operator, bool approved);\n    event BuildingTypeAdded(uint256 indexed typeId, string name, uint256 buildCostARK);\n    event Built(uint256 indexed landTokenId, uint256 indexed typeId, address indexed builder, uint256 level);\n    event Upgraded(uint256 indexed landTokenId, uint256 indexed typeId, uint8 newLevel);\n    event BurnedFromBuild(address indexed builder, uint256 amount);\n    event MaterialClaimed(address indexed player, uint256 indexed typeId, uint256 amount, uint256 decayedAmount);\n    event Maintained(uint256 indexed landTokenId, uint256 indexed typeId, uint256 costARK);\n    event RecipeExecuted(address indexed player, uint256 indexed outputTypeId, uint256 amount);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"BLD: not owner\");\n        _;\n    }\n\n    modifier onlyController() {\n        require(controllers[msg.sender] || msg.sender == owner, \"BLD: not controller\");\n        _;\n    }\n\n    constructor(address ark, address land) {\n        owner = msg.sender;\n        arkToken = ark;\n        landNFT = land;\n        _seedTypes();\n    }\n\n    /// @notice 预置建筑与材料类型\n    function _seedTypes() internal {\n        _addType(unicode\"基础工坊\", BuildingKind.Workshop, 500e18, 30e18, 20, 5, true);\n        _addType(unicode\"初级矿场\", BuildingKind.Mine, 800e18, 55e18, 15, 5, true);\n        _addType(unicode\"零售商店\", BuildingKind.Shop, 700e18, 45e18, 45, 5, true);\n        _addType(unicode\"农田\", BuildingKind.Farm, 300e18, 18e18, 10, 5, true);\n        _addType(unicode\"英雄雕像\", BuildingKind.Statue, 1200e18, 0, 80, 3, false);\n        _addType(unicode\"灯塔\", BuildingKind.Lighthouse, 1500e18, 0, 110, 3, false);\n        _addType(unicode\"主题乐园\", BuildingKind.Park, 3000e18, 0, 220, 3, false);\n        _addType(unicode\"木材\", BuildingKind.Material, 0, 0, 0, 1, false);\n        _addType(unicode\"矿石\", BuildingKind.Material, 0, 0, 0, 1, false);\n        _addType(unicode\"能量核\", BuildingKind.Material, 0, 0, 0, 1, false);\n        _addType(unicode\"设计图\", BuildingKind.Material, 0, 0, 0, 1, false);\n    }\n\n    function _addType(\n        string memory n,\n        BuildingKind k,\n        uint256 cost,\n        uint256 yieldPerDay,\n        uint32 pop,\n        uint8 maxLv,\n        bool functional\n    ) internal {\n        uint256 id = buildingTypes.length;\n        buildingTypes.push(\n            BuildingType({\n                name: n,\n                kind: k,\n                buildCostARK: cost,\n                baseYieldPerDay: yieldPerDay,\n                popularityGain: pop,\n                maxLevel: maxLv,\n                isFunctional: functional\n            })\n        );\n        emit BuildingTypeAdded(id, n, cost);\n    }\n\n    function typeCount() external view returns (uint256) {\n        return buildingTypes.length;\n    }\n\n    function getType(uint256 id)\n        external\n        view\n        returns (string memory n, uint8 kind, uint256 cost, uint256 yieldPerDay, uint32 pop, uint8 maxLv, bool functional)\n    {\n        require(id < buildingTypes.length, \"BLD: unknown type\");\n        BuildingType storage t = buildingTypes[id];\n        return (t.name, uint8(t.kind), t.buildCostARK, t.baseYieldPerDay, t.popularityGain, t.maxLevel, t.isFunctional);\n    }\n\n    // ---------------------------------------------------------------\n    // ERC-1155 最小实现\n    // ---------------------------------------------------------------\n\n    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {\n        return interfaceId == 0x01ffc9a7 || interfaceId == 0xd9b67a26;\n    }\n\n    function balanceOfBatch(address[] calldata accounts, uint256[] calldata ids)\n        external\n        view\n        returns (uint256[] memory)\n    {\n        require(accounts.length == ids.length, \"BLD: length mismatch\");\n        uint256[] memory out = new uint256[](accounts.length);\n        for (uint256 i = 0; i < accounts.length; i++) {\n            out[i] = balanceOf[accounts[i]][ids[i]];\n        }\n        return out;\n    }\n\n    function setApprovalForAll(address operator, bool approved_) external {\n        operatorApprovals[msg.sender][operator] = approved_;\n        emit ApprovalForAll(msg.sender, operator, approved_);\n    }\n\n    function safeTransferFrom(address from, address to, uint256 id, uint256 amount) external {\n        require(from == msg.sender || operatorApprovals[from][msg.sender], \"BLD: not authorized\");\n        require(balanceOf[from][id] >= amount, \"BLD: insufficient balance\");\n        require(to != address(0), \"BLD: transfer to zero\");\n        balanceOf[from][id] -= amount;\n        balanceOf[to][id] += amount;\n        emit TransferSingle(msg.sender, from, to, id, amount);\n    }\n\n    /// @notice 内部铸造（材料发放走这里）\n    function _mint(address to, uint256 id, uint256 amount) internal {\n        require(to != address(0), \"BLD: mint to zero\");\n        balanceOf[to][id] += amount;\n        emit TransferSingle(msg.sender, address(0), to, id, amount);\n    }\n\n    // ---------------------------------------------------------------\n    // 建造 / 升级\n    // ---------------------------------------------------------------\n\n    /**\n     * @notice 在土地上建造建筑。\n     * @dev 消耗 buildCostARK，其中 burnRateBps（5%）焚烧，其余归协议金库。\n     *      通过 LandNFT.consumeSlot 占用槽位，并提升地块人气。\n     */\n    function build(uint256 landTokenId, uint256 typeId, address treasury)\n        external\n        returns (uint8 level)\n    {\n        require(typeId < buildingTypes.length, \"BLD: unknown type\");\n        BuildingType storage t = buildingTypes[typeId];\n        require(t.kind != BuildingKind.Material, \"BLD: materials cannot be built\");\n        require(ILand(landNFT).ownerOf(landTokenId) == msg.sender, \"BLD: not land owner\");\n\n        uint256 cost = t.buildCostARK;\n        uint256 burnAmount = (cost * burnRateBps) / 10000;\n        uint256 treasuryAmount = cost - burnAmount;\n\n        // 焚烧份额：永久销毁\n        IArk(arkToken).burnFrom(msg.sender, burnAmount, \"build-burn\");\n        // 协议份额\n        if (treasuryAmount > 0) {\n            IArk(arkToken).transferFrom(msg.sender, treasury, treasuryAmount);\n        }\n\n        // 占用土地槽位\n        ILand(landNFT).consumeSlot(landTokenId);\n        // 提升人气\n        if (t.popularityGain > 0) {\n            ILand(landNFT).adjustPopularity(landTokenId, int32(uint32(t.popularityGain)));\n        }\n        ILand(landNFT).touchMaintenance(landTokenId);\n\n        buildingLevel[landTokenId][typeId] = 1;\n        buildingLastMaint[landTokenId][typeId] = block.timestamp;\n        landBuildings[landTokenId].push(typeId);\n\n        emit Built(landTokenId, typeId, msg.sender, 1);\n        emit BurnedFromBuild(msg.sender, burnAmount);\n        return 1;\n    }\n\n    /**\n     * @notice 升级建筑：消耗 $ARK + 材料，等级越高产出越高。\n     * @dev 成本随等级指数上升，产出线性上升 => 边际收益递减，抑制无脑堆级。\n     */\n    function upgrade(uint256 landTokenId, uint256 typeId, address treasury) external returns (uint8 newLevel) {\n        require(ILand(landNFT).ownerOf(landTokenId) == msg.sender, \"BLD: not land owner\");\n        BuildingType storage t = buildingTypes[typeId];\n        uint8 cur = buildingLevel[landTokenId][typeId];\n        require(cur > 0, \"BLD: not built\");\n        require(cur < t.maxLevel, \"BLD: max level reached\");\n\n        // 升级成本 = 基础造价 * (等级+1)^1.6 近似：这里用整数近似 (lv+1)*1.6\n        uint256 cost = (t.buildCostARK * (uint256(cur) + 1) * 16) / 10;\n        uint256 burnAmount = (cost * burnRateBps) / 10000;\n        uint256 treasuryAmount = cost - burnAmount;\n\n        IArk(arkToken).burnFrom(msg.sender, burnAmount, \"upgrade-burn\");\n        if (treasuryAmount > 0) {\n            IArk(arkToken).transferFrom(msg.sender, treasury, treasuryAmount);\n        }\n\n        // 升级额外提升人气\n        ILand(landNFT).adjustPopularity(landTokenId, int32(uint32(t.popularityGain) / 2));\n        ILand(landNFT).touchMaintenance(landTokenId);\n\n        newLevel = cur + 1;\n        buildingLevel[landTokenId][typeId] = newLevel;\n        buildingLastMaint[landTokenId][typeId] = block.timestamp;\n\n        emit Upgraded(landTokenId, typeId, newLevel);\n        emit BurnedFromBuild(msg.sender, burnAmount);\n        return newLevel;\n    }\n\n    /**\n     * @notice 维护建筑，重置衰败计时。\n     * @dev 防崩盘机制：建筑需持续经营，离线过久产出衰减。\n     */\n    function maintain(uint256 landTokenId, uint256 typeId) external {\n        require(ILand(landNFT).ownerOf(landTokenId) == msg.sender, \"BLD: not land owner\");\n        uint8 lv = buildingLevel[landTokenId][typeId];\n        require(lv > 0, \"BLD: not built\");\n\n        uint256 cost = 20e18 * lv;\n        IArk(arkToken).transferFrom(msg.sender, address(this), cost);\n\n        buildingLastMaint[landTokenId][typeId] = block.timestamp;\n        ILand(landNFT).touchMaintenance(landTokenId);\n        emit Maintained(landTokenId, typeId, cost);\n    }\n\n    /**\n     * @notice 计算建筑当前有效日产出（考虑衰败）。\n     * @dev 等级线性加成；超过 7 天未维护按每多 7 天衰减 25%，最低 0。\n     */\n    function effectiveDailyYield(uint256 landTokenId, uint256 typeId) public view returns (uint256) {\n        BuildingType storage t = buildingTypes[typeId];\n        if (!t.isFunctional) return 0;\n        uint8 lv = buildingLevel[landTokenId][typeId];\n        if (lv == 0) return 0;\n\n        uint256 gross = t.baseYieldPerDay * (100 + (uint256(lv) - 1) * 50);\n        gross = gross / 100;\n\n        uint256 lastMaint = buildingLastMaint[landTokenId][typeId];\n        uint256 idle = block.timestamp - lastMaint;\n        if (idle <= 7 days) return gross;\n\n        uint256 decaySteps = (idle - 7 days) / 7 days;\n        uint256 factorBps = 10000;\n        for (uint256 i = 0; i < decaySteps && factorBps > 0; i++) {\n            factorBps = (factorBps * 75) / 100; // 每 7 天衰减 25%\n        }\n        return (gross * factorBps) / 10000;\n    }\n\n    // ---------------------------------------------------------------\n    // 生产与材料合成\n    // ---------------------------------------------------------------\n\n    /// @notice 领取生产产出（材料以 ERC-1155 发放），由游戏控制器结算\n    function claimProduction(address player, uint256 materialTypeId, uint256 amount) external onlyController {\n        _mint(player, materialTypeId, amount);\n        emit MaterialClaimed(player, materialTypeId, amount, 0);\n    }\n\n    /**\n     * @notice 材料合成：木材 x3 + 矿石 x2 -> 能量核 x1\n     * @dev 打通「原料 → 制造 → 零售」链条的中段\n     */\n    function craftEnergyCore() external returns (uint256) {\n        uint256 WOOD = 7;\n        uint256 ORE = 8;\n        uint256 CORE = 9;\n        require(balanceOf[msg.sender][WOOD] >= 3, \"BLD: need 3 wood\");\n        require(balanceOf[msg.sender][ORE] >= 2, \"BLD: need 2 ore\");\n\n        balanceOf[msg.sender][WOOD] -= 3;\n        balanceOf[msg.sender][ORE] -= 2;\n        _mint(msg.sender, CORE, 1);\n\n        emit RecipeExecuted(msg.sender, CORE, 1);\n        return CORE;\n    }\n\n    function setController(address c, bool allowed) external onlyOwner {\n        require(c != address(0), \"BLD: zero controller\");\n        controllers[c] = allowed;\n        if (allowed) gameController = c;\n    }\n\n    function setGameController(address c) external onlyOwner {\n        require(c != address(0), \"BLD: zero controller\");\n        controllers[c] = true;\n        gameController = c;\n    }\n\n    function setBurnRate(uint256 bps) external onlyOwner {\n        require(bps <= 2000, \"BLD: burn rate too high\");\n        burnRateBps = bps;\n    }\n\n    function setTreasuryOnArk(address) external pure {}\n}\n", "LandMarket": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title LandMarket —— 土地买卖与租赁市场\n * @notice 承担元界方舟的核心交易闭环：买地 → 盖店 → 挂租 → 别人来消费 → 提现代币\n *\n * 经济规则（与白皮书一致）：\n *  - 租赁收入分配：房东 90%，协议 10%（10% 进入燃烧池）\n *  - 土地交易税：3%（买方承担），进入燃烧池\n *  - 租金按 $ARK 计价结算，支持日租 / 月租\n */\ninterface IArk {\n    function transferFrom(address from, address to, uint256 amount) external returns (bool);\n    function transfer(address to, uint256 amount) external returns (bool);\n}\n\ninterface ILand {\n    function ownerOf(uint256 tokenId) external view returns (address);\n    function assignRenter(uint256 tokenId, address renter, uint256 durationSeconds) external;\n    function clearRenter(uint256 tokenId) external;\n    function getLand(uint256 tokenId)\n        external\n        view\n        returns (\n            uint16, uint16, uint8, uint8, uint32, uint8, uint8,\n            uint256 dailyRentARK, uint256 monthlyRentARK,\n            address renter, uint256 rentExpiry, bool listed, uint256 salePrice\n        );\n        function delist(uint256 tokenId) external;\n        function delistFor(uint256 tokenId) external;\n        function list(uint256 tokenId, uint256 price) external;\n        function listFor(uint256 tokenId, address seller, uint256 price) external;\n        function marketTransfer(address from, address to, uint256 tokenId) external;\n    }\n\ncontract LandMarket {\n    address public owner;\n    address public arkToken;\n    address public landNFT;\n    address public metaToken;\n    address public burnPool;\n\n    /// @notice 租赁分成：房东占比（基点），9000 = 90%\n    uint256 public landlordShareBps = 9000;\n    /// @notice 协议抽成进入燃烧池（基点），1000 = 10%\n    uint256 public protocolShareBps = 1000;\n    /// @notice 土地交易税（基点），300 = 3%\n    uint256 public tradeTaxBps = 300;\n\n    struct Listing {\n        address seller;\n        uint256 price;\n        bool active;\n    }\n\n    mapping(uint256 => Listing) public listings;\n    uint256 public activeListingCount;\n\n    /// @notice 租赁订单：租客预存租金，到时结算给房东\n    struct RentOrder {\n        address renter;\n        uint256 landTokenId;\n        uint256 amount;\n        uint256 startTime;\n        uint256 endTime;\n        bool settled;\n    }\n    RentOrder[] public rentOrders;\n\n    uint256 public totalRentVolume;\n    uint256 public totalProtocolFee;\n    uint256 public totalTradeVolume;\n    uint256 public totalTradeTax;\n\n    event Listed(uint256 indexed landTokenId, address indexed seller, uint256 price);\n    event Delisted(uint256 indexed landTokenId);\n    event LandSold(uint256 indexed landTokenId, address indexed buyer, address indexed seller, uint256 price, uint256 tax);\n    event RentPaid(uint256 indexed orderId, uint256 indexed landTokenId, address indexed renter, uint256 amount);\n    event RentSettled(uint256 indexed orderId, address indexed landlord, uint256 landlordAmount, uint256 protocolAmount);\n    event RatesUpdated(uint256 landlordShareBps, uint256 tradeTaxBps);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"MARKET: not owner\");\n        _;\n    }\n\n    constructor(address ark, address land, address meta, address pool) {\n        owner = msg.sender;\n        arkToken = ark;\n        landNFT = land;\n        metaToken = meta;\n        burnPool = pool;\n    }\n\n    // ---------------------------------------------------------------\n    // 土地买卖\n    // ---------------------------------------------------------------\n\n    /// @notice 地主挂单出售土地\n    /// @dev 依赖 LandNFT 作为挂单状态的唯一真相源，避免双写不一致\n    function listLand(uint256 landTokenId, uint256 price) external {\n        require(ILand(landNFT).ownerOf(landTokenId) == msg.sender, \"MARKET: not owner\");\n        require(price > 0, \"MARKET: zero price\");\n        require(!listings[landTokenId].active, \"MARKET: already listed\");\n\n        listings[landTokenId] = Listing({seller: msg.sender, price: price, active: true});\n        activeListingCount += 1;\n        // 同步到 LandNFT（此时土地未出租，正是为了挂售）\n        ILand(landNFT).listFor(landTokenId, msg.sender, price);\n        emit Listed(landTokenId, msg.sender, price);\n    }\n\n    function delistLand(uint256 landTokenId) external {\n        Listing storage l = listings[landTokenId];\n        require(l.active, \"MARKET: not listed\");\n        require(l.seller == msg.sender, \"MARKET: not seller\");\n        l.active = false;\n        activeListingCount -= 1;\n        ILand(landNFT).delistFor(landTokenId);\n        emit Delisted(landTokenId);\n    }\n\n    /**\n     * @notice 购买土地。买方支付 price + 3% 交易税。\n     * @dev 交易税直接转入燃烧池，是通缩闭环的一环。\n     */\n    function buyLand(uint256 landTokenId) external returns (uint256 totalPaid) {\n        Listing storage l = listings[landTokenId];\n        require(l.active, \"MARKET: not listed\");\n        address seller = l.seller;\n        require(seller != msg.sender, \"MARKET: cannot buy own land\");\n\n        uint256 price = l.price;\n        uint256 tax = (price * tradeTaxBps) / 10000;\n\n        // 买方支付：地价给卖方，税进燃烧池\n        IArk(arkToken).transferFrom(msg.sender, seller, price);\n        if (tax > 0) {\n            IArk(arkToken).transferFrom(msg.sender, burnPool, tax);\n        }\n\n        l.active = false;\n        activeListingCount -= 1;\n        totalTradeVolume += price;\n        totalTradeTax += tax;\n\n        // 转移土地所有权（走市场专用入口，调用者为本合约）\n        ILand(landNFT).marketTransfer(seller, msg.sender, landTokenId);\n\n        totalPaid = price + tax;\n        emit LandSold(landTokenId, msg.sender, seller, price, tax);\n        return totalPaid;\n    }\n\n    // ---------------------------------------------------------------\n    // 租赁\n    // ---------------------------------------------------------------\n\n    /**\n     * @notice 租客支付租金租用土地。\n     * @dev 资金先托管在合约，租约到期后房东可结算提取。\n     *      分配：房东 90%，协议 10%（10% 进燃烧池）。\n     */\n    function rentLand(uint256 landTokenId, bool monthly) external returns (uint256 orderId) {\n        (\n            , , , , , , ,\n            uint256 dailyRent,\n            uint256 monthlyRent,\n            ,\n            ,\n            ,\n        ) = ILand(landNFT).getLand(landTokenId);\n\n        uint256 amount = monthly ? monthlyRent : dailyRent;\n        require(amount > 0, \"MARKET: rent not configured\");\n        require(ILand(landNFT).ownerOf(landTokenId) != msg.sender, \"MARKET: landlord cannot rent own land\");\n\n        // 收取租金到托管\n        IArk(arkToken).transferFrom(msg.sender, address(this), amount);\n\n        uint256 duration = monthly ? 30 days : 1 days;\n        orderId = rentOrders.length;\n        rentOrders.push(\n            RentOrder({\n                renter: msg.sender,\n                landTokenId: landTokenId,\n                amount: amount,\n                startTime: block.timestamp,\n                endTime: block.timestamp + duration,\n                settled: false\n            })\n        );\n\n        ILand(landNFT).assignRenter(landTokenId, msg.sender, duration);\n        totalRentVolume += amount;\n\n        emit RentPaid(orderId, landTokenId, msg.sender, amount);\n        return orderId;\n    }\n\n    /**\n     * @notice 结算租赁订单：房东拿 90%，协议 10% 进燃烧池。\n     */\n    function settleRent(uint256 orderId) external returns (uint256 landlordAmount, uint256 protocolAmount) {\n        require(orderId < rentOrders.length, \"MARKET: unknown order\");\n        RentOrder storage o = rentOrders[orderId];\n        require(!o.settled, \"MARKET: already settled\");\n\n        address landlord = ILand(landNFT).ownerOf(o.landTokenId);\n\n        landlordAmount = (o.amount * landlordShareBps) / 10000;\n        protocolAmount = o.amount - landlordAmount;\n\n        o.settled = true;\n        ILand(landNFT).clearRenter(o.landTokenId);\n\n        if (landlordAmount > 0) {\n            IArk(arkToken).transfer(landlord, landlordAmount);\n        }\n        if (protocolAmount > 0) {\n            IArk(arkToken).transfer(burnPool, protocolAmount);\n            totalProtocolFee += protocolAmount;\n        }\n\n        emit RentSettled(orderId, landlord, landlordAmount, protocolAmount);\n        return (landlordAmount, protocolAmount);\n    }\n\n    function rentOrderCount() external view returns (uint256) {\n        return rentOrders.length;\n    }\n\n    /// @notice 预估租金分配，供前端展示\n    function previewRentSplit(uint256 amount)\n        external\n        view\n        returns (uint256 landlordAmount, uint256 protocolAmount)\n    {\n        landlordAmount = (amount * landlordShareBps) / 10000;\n        protocolAmount = amount - landlordAmount;\n    }\n\n    // ---------------------------------------------------------------\n    // 参数\n    // ---------------------------------------------------------------\n\n    function setRates(uint256 landlordBps, uint256 tradeTaxBps_) external onlyOwner {\n        require(landlordBps <= 10000, \"MARKET: bad share\");\n        landlordShareBps = landlordBps;\n        protocolShareBps = 10000 - landlordBps;\n        tradeTaxBps = tradeTaxBps_;\n        emit RatesUpdated(landlordBps, tradeTaxBps_);\n    }\n\n    function setBurnPool(address pool) external onlyOwner {\n        require(pool != address(0), \"MARKET: zero pool\");\n        burnPool = pool;\n    }\n\n    /// @notice 市场累计统计，供经济看板读取\n    function stats()\n        external\n        view\n        returns (uint256 listings_, uint256 rentVolume, uint256 protocolFee, uint256 tradeVolume, uint256 tradeTax)\n    {\n        return (activeListingCount, totalRentVolume, totalProtocolFee, totalTradeVolume, totalTradeTax);\n    }\n}\n", "LandNFT": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title LandNFT —— 元界方舟土地凭证（ERC-721）\n * @notice 每块土地是一个独立 NFT，携带坐标、地形、人气值、建筑槽位与租赁配置。\n *\n * 设计要点：\n *  1. 地图分三类区域：大陆 / 海域 / 空岛（LandType）\n *  2. 地形决定产出加成：平原 / 火山 / 冰川（Terrain）\n *  3. 人气值随建筑与活动浮动，直接影响周边材料价格与地价\n *  4. 可分拆租赁：主人设「日租 / 月租」，收益由租赁市场自动结算\n *  5. 新地块按玩家活跃度解锁，不无限发地（见 unlockNextTile）\n */\ncontract LandNFT {\n    string public name = \"MetaArk Land\";\n    string public symbol = \"MALAND\";\n\n    address public owner;\n    /// @notice 被授权的游戏逻辑合约集合（可多个：BuildingNFT、LandMarket、任务系统…）\n    mapping(address => bool) public controllers;\n    /// @notice 主控制器（用于前端快速查询）\n    address public gameController;\n\n    uint256 public totalSupply;\n    uint256 public maxTiles;       // 当前已解锁的格子上限\n    uint256 public hardTileCap;    // 硬上限，永不突破\n\n    enum LandType { Mainland, Ocean, SkyIsland }\n    enum Terrain { Plain, Volcano, Glacier }\n\n    struct Land {\n        uint16 x;\n        uint16 y;\n        LandType landType;\n        Terrain terrain;\n        uint32 popularity;      // 人气值，基础 100\n        uint8 slots;            // 建筑槽位总数\n        uint8 usedSlots;        // 已占用槽位\n        uint256 dailyRentARK;   // 日租金（以 $ARK 计价，wei）\n        uint256 monthlyRentARK; // 月租金\n        address renter;         // 当前租客\n        uint256 rentExpiry;     // 租约到期时间\n        uint256 lastMaintTime;  // 上次维护时间（用于衰败判定）\n        bool listed;            // 是否在市场上挂售\n        uint256 salePrice;      // 挂售价（$ARK wei）\n    }\n\n    mapping(uint256 => Land) internal lands;\n    mapping(uint256 => address) public ownerOf;\n    mapping(address => uint256) public balanceOf;\n    mapping(uint256 => address) public approved;\n    mapping(address => mapping(address => bool)) public operatorApprovals;\n\n    /// @notice 地形产出加成（基点，10000 = 1.0x）\n    function terrainYieldBps(Terrain t) public pure returns (uint256) {\n        if (t == Terrain.Plain) return 10000;    // 1.00x  均衡\n        if (t == Terrain.Volcano) return 12500;  // 1.25x  矿产高，农业低\n        return 11500;                            // 1.15x  冰川，稀有矿\n    }\n\n    /// @notice 区域稀有度（决定铸造成本与治理权重）\n    function landTypeRarityBps(LandType t) public pure returns (uint256) {\n        if (t == LandType.Mainland) return 10000;  // 常见\n        if (t == LandType.Ocean) return 15000;     // 较稀有\n        return 25000;                               // 空岛，最稀有\n    }\n\n    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);\n    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);\n    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);\n    event LandMinted(uint256 indexed tokenId, address indexed to, uint16 x, uint16 y, uint8 landType, uint8 terrain);\n    event PopularityChanged(uint256 indexed tokenId, uint32 oldValue, uint32 newValue);\n    event SlotConsumed(uint256 indexed tokenId, uint8 used, uint8 total);\n    event SlotReleased(uint256 indexed tokenId, uint8 used, uint8 total);\n    event RentConfigured(uint256 indexed tokenId, uint256 dailyARK, uint256 monthlyARK);\n    event RenterAssigned(uint256 indexed tokenId, address indexed renter, uint256 expiry);\n    event RenterCleared(uint256 indexed tokenId);\n    event Listed(uint256 indexed tokenId, uint256 price);\n    event Delisted(uint256 indexed tokenId);\n    event TilesUnlocked(uint256 newMaxTiles);\n    event ControllerUpdated(address indexed controller, bool allowed);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"LAND: not owner\");\n        _;\n    }\n\n    modifier onlyController() {\n        require(controllers[msg.sender] || msg.sender == owner, \"LAND: not controller\");\n        _;\n    }\n\n    modifier onlyTokenOwner(uint256 tokenId) {\n        require(ownerOf[tokenId] == msg.sender, \"LAND: not token owner\");\n        _;\n    }\n\n    constructor(uint256 initialTiles, uint256 hardCap) {\n        require(initialTiles <= hardCap, \"LAND: initial > cap\");\n        owner = msg.sender;\n        maxTiles = initialTiles;\n        hardTileCap = hardCap;\n    }\n\n    // ---------------------------------------------------------------\n    // ERC-721 核心\n    // ---------------------------------------------------------------\n\n    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {\n        return interfaceId == 0x01ffc9a7 || interfaceId == 0x80ac58cd || interfaceId == 0x5b5e139f;\n    }\n\n    function approve(address to, uint256 tokenId) external {\n        address tokenOwner = ownerOf[tokenId];\n        require(msg.sender == tokenOwner || operatorApprovals[tokenOwner][msg.sender], \"LAND: not authorized\");\n        approved[tokenId] = to;\n        emit Approval(tokenOwner, to, tokenId);\n    }\n\n    function setApprovalForAll(address operator, bool isApproved) external {\n        operatorApprovals[msg.sender][operator] = isApproved;\n        emit ApprovalForAll(msg.sender, operator, isApproved);\n    }\n\n    function transferFrom(address from, address to, uint256 tokenId) public {\n        require(ownerOf[tokenId] == from, \"LAND: wrong from\");\n        require(to != address(0), \"LAND: transfer to zero\");\n        require(\n            msg.sender == from || operatorApprovals[from][msg.sender] || approved[tokenId] == msg.sender,\n            \"LAND: not authorized\"\n        );\n        // 有租客的土地不可转让，保护租客权益\n        require(lands[tokenId].renter == address(0), \"LAND: land is rented out\");\n\n        delete approved[tokenId];\n        ownerOf[tokenId] = to;\n        balanceOf[from] -= 1;\n        balanceOf[to] += 1;\n        // 挂牌状态在转让后失效\n        lands[tokenId].listed = false;\n        lands[tokenId].salePrice = 0;\n\n        emit Transfer(from, to, tokenId);\n        emit Delisted(tokenId);\n    }\n\n    function safeTransferFrom(address from, address to, uint256 tokenId) external {\n        transferFrom(from, to, tokenId);\n    }\n\n    /**\n     * @notice 由授权市场合约发起的转移（用于成交交割）。\n     * @dev 与 transferFrom 的区别：调用者是市场合约而非持有人，\n     *      因此仅校验「调用者持有该 token 的处分授权」，并强制清空挂单状态。\n     */\n    function marketTransfer(address from, address to, uint256 tokenId) external onlyController {\n        require(ownerOf[tokenId] == from, \"LAND: wrong from\");\n        require(to != address(0), \"LAND: transfer to zero\");\n        require(lands[tokenId].renter == address(0), \"LAND: land is rented out\");\n\n        delete approved[tokenId];\n        ownerOf[tokenId] = to;\n        balanceOf[from] -= 1;\n        balanceOf[to] += 1;\n        lands[tokenId].listed = false;\n        lands[tokenId].salePrice = 0;\n\n        emit Transfer(from, to, tokenId);\n        emit Delisted(tokenId);\n    }\n\n    function tokenURI(uint256 tokenId) external view returns (string memory) {\n        require(ownerOf[tokenId] != address(0), \"LAND: nonexistent token\");\n        Land storage l = lands[tokenId];\n        return string(\n            abi.encodePacked(\n                \"ipfs://metaark/land/\",\n                _toString(tokenId),\n                \"?x=\", _toString(l.x),\n                \"&y=\", _toString(l.y),\n                \"&type=\", _toString(uint256(l.landType)),\n                \"&terrain=\", _toString(uint256(l.terrain))\n            )\n        );\n    }\n\n    // ---------------------------------------------------------------\n    // 铸造与解锁\n    // ---------------------------------------------------------------\n\n    /// @notice 铸造创世地块 / 新地块（由 owner 或游戏控制器调用）\n    function mintLand(\n        address to,\n        uint16 x,\n        uint16 y,\n        LandType landType,\n        Terrain terrain\n    ) external onlyController returns (uint256) {\n        require(totalSupply < maxTiles, \"LAND: all tiles for now are minted\");\n        uint256 tokenId = totalSupply;\n\n        uint8 baseSlots = landType == LandType.SkyIsland ? 6 : (landType == LandType.Ocean ? 3 : 5);\n\n        Land storage l = lands[tokenId];\n        l.x = x;\n        l.y = y;\n        l.landType = landType;\n        l.terrain = terrain;\n        l.popularity = 100;\n        l.slots = baseSlots;\n        l.usedSlots = 0;\n        l.lastMaintTime = block.timestamp;\n\n        ownerOf[tokenId] = to;\n        balanceOf[to] += 1;\n        totalSupply += 1;\n\n        emit Transfer(address(0), to, tokenId);\n        emit LandMinted(tokenId, to, x, y, uint8(landType), uint8(terrain));\n        return tokenId;\n    }\n\n    /**\n     * @notice 按玩家活跃度解锁新地块。\n     * @dev 防崩盘机制之一：不无限发地。解锁量 = f(活跃玩家数)，且不超过硬上限。\n     *      活跃度由游戏控制器统计后传入，链上留痕可审计。\n     */\n    function unlockNextTile(uint256 activePlayers) external onlyController returns (uint256) {\n        require(activePlayers > 0, \"LAND: no active players\");\n        // 每 10 名活跃玩家解锁 1 格，单次最多解锁 20 格\n        uint256 unlockCount = activePlayers / 10;\n        if (unlockCount == 0) unlockCount = 1;\n        if (unlockCount > 20) unlockCount = 20;\n\n        uint256 newMax = maxTiles + unlockCount;\n        if (newMax > hardTileCap) newMax = hardTileCap;\n        require(newMax > maxTiles, \"LAND: hard cap reached\");\n\n        maxTiles = newMax;\n        emit TilesUnlocked(newMax);\n        return newMax;\n    }\n\n    // ---------------------------------------------------------------\n    // 游戏逻辑接口（由 gameController 调用）\n    // ---------------------------------------------------------------\n\n    function consumeSlot(uint256 tokenId) external onlyController returns (bool) {\n        Land storage l = lands[tokenId];\n        require(l.usedSlots < l.slots, \"LAND: no free slot\");\n        l.usedSlots += 1;\n        emit SlotConsumed(tokenId, l.usedSlots, l.slots);\n        return true;\n    }\n\n    function releaseSlot(uint256 tokenId) external onlyController returns (bool) {\n        Land storage l = lands[tokenId];\n        require(l.usedSlots > 0, \"LAND: no used slot\");\n        l.usedSlots -= 1;\n        emit SlotReleased(tokenId, l.usedSlots, l.slots);\n        return true;\n    }\n\n    /// @notice 调整人气值（建造、办活动、衰败都会调用）\n    function adjustPopularity(uint256 tokenId, int32 delta) external onlyController returns (uint32) {\n        Land storage l = lands[tokenId];\n        uint32 old = l.popularity;\n        int256 next = int256(uint256(old)) + int256(delta);\n        if (next < 0) next = 0;\n        if (next > 1000) next = 1000; // 人气上限\n        l.popularity = uint32(uint256(next));\n        emit PopularityChanged(tokenId, old, l.popularity);\n        return l.popularity;\n    }\n\n    /// @notice 增加建筑槽位（升级土地）\n    function addSlot(uint256 tokenId, uint8 extra) external onlyController {\n        Land storage l = lands[tokenId];\n        require(l.slots + extra <= 12, \"LAND: slot limit\");\n        l.slots += extra;\n    }\n\n    // ---------------------------------------------------------------\n    // 租赁配置\n    // ---------------------------------------------------------------\n\n    /// @notice 地主设置租金（$ARK 计价）\n    function setRent(uint256 tokenId, uint256 dailyARK, uint256 monthlyARK) external onlyTokenOwner(tokenId) {\n        require(dailyARK > 0 || monthlyARK > 0, \"LAND: zero rent\");\n        Land storage l = lands[tokenId];\n        l.dailyRentARK = dailyARK;\n        l.monthlyRentARK = monthlyARK;\n        emit RentConfigured(tokenId, dailyARK, monthlyARK);\n    }\n\n    function assignRenter(uint256 tokenId, address renter, uint256 durationSeconds) external onlyController {\n        Land storage l = lands[tokenId];\n        l.renter = renter;\n        l.rentExpiry = block.timestamp + durationSeconds;\n        emit RenterAssigned(tokenId, renter, l.rentExpiry);\n    }\n\n    function clearRenter(uint256 tokenId) external onlyController {\n        lands[tokenId].renter = address(0);\n        lands[tokenId].rentExpiry = 0;\n        emit RenterCleared(tokenId);\n    }\n\n    // ---------------------------------------------------------------\n    // 市场挂单\n    // ---------------------------------------------------------------\n\n    function list(uint256 tokenId, uint256 price) external onlyTokenOwner(tokenId) {\n        _list(tokenId, price);\n    }\n\n    /// @notice 由授权市场合约代为挂单（调用者是市场，而非地主本人）\n    function listFor(uint256 tokenId, address seller, uint256 price) external onlyController {\n        require(ownerOf[tokenId] == seller, \"LAND: not token owner\");\n        _list(tokenId, price);\n    }\n\n    function _list(uint256 tokenId, uint256 price) internal {\n        require(price > 0, \"LAND: zero price\");\n        require(lands[tokenId].renter == address(0), \"LAND: rented out\");\n        lands[tokenId].listed = true;\n        lands[tokenId].salePrice = price;\n        emit Listed(tokenId, price);\n    }\n\n    function delist(uint256 tokenId) external onlyTokenOwner(tokenId) {\n        lands[tokenId].listed = false;\n        lands[tokenId].salePrice = 0;\n        emit Delisted(tokenId);\n    }\n\n    /// @notice 由授权市场合约代为撤单\n    function delistFor(uint256 tokenId) external onlyController {\n        lands[tokenId].listed = false;\n        lands[tokenId].salePrice = 0;\n        emit Delisted(tokenId);\n    }\n\n    // ---------------------------------------------------------------\n    // 查询\n    // ---------------------------------------------------------------\n\n    function getLand(uint256 tokenId)\n        external\n        view\n        returns (\n            uint16 x,\n            uint16 y,\n            uint8 landType,\n            uint8 terrain,\n            uint32 popularity,\n            uint8 slots,\n            uint8 usedSlots,\n            uint256 dailyRentARK,\n            uint256 monthlyRentARK,\n            address renter,\n            uint256 rentExpiry,\n            bool listed,\n            uint256 salePrice\n        )\n    {\n        require(ownerOf[tokenId] != address(0), \"LAND: nonexistent token\");\n        Land storage l = lands[tokenId];\n        return (\n            l.x, l.y, uint8(l.landType), uint8(l.terrain), l.popularity,\n            l.slots, l.usedSlots, l.dailyRentARK, l.monthlyRentARK,\n            l.renter, l.rentExpiry, l.listed, l.salePrice\n        );\n    }\n\n    /// @notice 是否处于出租可用状态\n    function isAvailableForRent(uint256 tokenId) external view returns (bool) {\n        Land storage l = lands[tokenId];\n        return (l.dailyRentARK > 0 || l.monthlyRentARK > 0) && l.renter == address(0);\n    }\n\n    /// @notice 估算地块总估值（$ARK），供前端展示地价热力\n    function estimateValue(uint256 tokenId) external view returns (uint256) {\n        Land storage l = lands[tokenId];\n        uint256 base = 100e18;\n        uint256 byType = (base * landTypeRarityBps(l.landType)) / 10000;\n        uint256 byPop = (byType * (100 + uint256(l.popularity))) / 200;\n        uint256 bySlots = (byPop * (100 + uint256(l.usedSlots) * 20)) / 100;\n        return bySlots;\n    }\n\n    // ---------------------------------------------------------------\n    // 管理\n    // ---------------------------------------------------------------\n\n    /// @notice 授权 / 撤销一个游戏逻辑合约\n    function setController(address c, bool allowed) external onlyOwner {\n        require(c != address(0), \"LAND: zero controller\");\n        controllers[c] = allowed;\n        if (allowed) gameController = c;\n        emit ControllerUpdated(c, allowed);\n    }\n\n    /// @notice 兼容旧接口：等价于 setController(c, true)\n    function setGameController(address c) external onlyOwner {\n        require(c != address(0), \"LAND: zero controller\");\n        controllers[c] = true;\n        gameController = c;\n        emit ControllerUpdated(c, true);\n    }\n\n    function setTerrain(uint256 tokenId, Terrain t) external onlyOwner {\n        lands[tokenId].terrain = t;\n    }\n\n    function touchMaintenance(uint256 tokenId) external onlyController {\n        lands[tokenId].lastMaintTime = block.timestamp;\n    }\n\n    function lastMaintenanceOf(uint256 tokenId) external view returns (uint256) {\n        return lands[tokenId].lastMaintTime;\n    }\n\n    // ---------------------------------------------------------------\n    // 工具\n    // ---------------------------------------------------------------\n\n    function _toString(uint256 value) internal pure returns (string memory) {\n        if (value == 0) return \"0\";\n        uint256 temp = value;\n        uint256 digits;\n        while (temp != 0) {\n            digits++;\n            temp /= 10;\n        }\n        bytes memory buffer = new bytes(digits);\n        while (value != 0) {\n            digits -= 1;\n            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));\n            value /= 10;\n        }\n        return string(buffer);\n    }\n}\n", "MetaToken": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/**\n * @title MetaToken —— $META 治理币\n * @notice 元界方舟的治理代币，总量恒定，永不增发。\n *\n * 获取：创世空投、土地分红、排行榜奖励\n * 用途：购买稀有地、提案投票、进入精英区\n *\n * 与 $ARK 的分工：$ARK 负责日常流转（通胀、可无限），\n * $META 代表稀缺权益（通缩、固定上限）。\n */\ncontract MetaToken {\n    string public name = \"MetaArk Governance Token\";\n    string public symbol = \"META\";\n    uint8 public constant decimals = 18;\n\n    /// @notice 硬顶，恒定不变\n    uint256 public constant MAX_SUPPLY = 100_000_000e18;\n\n    uint256 public totalSupply;\n    address public owner;\n\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n\n    /// @notice 持币人列表（用于分红快照遍历）\n    address[] public holders;\n    mapping(address => bool) public isHolder;\n\n    /// @notice 治理：提案 -> 投票\n    struct Proposal {\n        string title;\n        uint256 forVotes;\n        uint256 againstVotes;\n        uint256 deadline;\n        bool executed;\n    }\n    Proposal[] public proposals;\n    mapping(uint256 => mapping(address => bool)) public hasVoted;\n\n    /// @notice 精英区白名单（持币门槛达标才可进入）\n    uint256 public eliteThreshold = 1000e18;\n\n    event Transfer(address indexed from, address indexed to, uint256 value);\n    event Approval(address indexed owner, address indexed spender, uint256 value);\n    event Mint(address indexed to, uint256 amount, string reason);\n    event ProposalCreated(uint256 indexed id, string title, uint256 deadline);\n    event Voted(uint256 indexed id, address indexed voter, bool support, uint256 weight);\n    event EliteThresholdUpdated(uint256 value);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"META: not owner\");\n        _;\n    }\n\n    constructor(uint256 initialSupply) {\n        require(initialSupply <= MAX_SUPPLY, \"META: exceeds max supply\");\n        owner = msg.sender;\n        _mint(msg.sender, initialSupply, \"genesis\");\n    }\n\n    // ---------------------------------------------------------------\n    // ERC-20 基础\n    // ---------------------------------------------------------------\n\n    function transfer(address to, uint256 amount) external returns (bool) {\n        _transfer(msg.sender, to, amount);\n        return true;\n    }\n\n    function approve(address spender, uint256 amount) external returns (bool) {\n        allowance[msg.sender][spender] = amount;\n        emit Approval(msg.sender, spender, amount);\n        return true;\n    }\n\n    function transferFrom(address from, address to, uint256 amount) external returns (bool) {\n        uint256 allowed = allowance[from][msg.sender];\n        if (allowed != type(uint256).max) {\n            require(allowed >= amount, \"META: insufficient allowance\");\n            allowance[from][msg.sender] = allowed - amount;\n        }\n        _transfer(from, to, amount);\n        return true;\n    }\n\n    function _transfer(address from, address to, uint256 amount) internal {\n        require(to != address(0), \"META: transfer to zero\");\n        require(balanceOf[from] >= amount, \"META: insufficient balance\");\n        unchecked {\n            balanceOf[from] -= amount;\n            balanceOf[to] += amount;\n        }\n        if (!isHolder[to] && to != address(0)) {\n            isHolder[to] = true;\n            holders.push(to);\n        }\n        emit Transfer(from, to, amount);\n    }\n\n    function _mint(address to, uint256 amount, string memory reason) internal {\n        require(to != address(0), \"META: mint to zero\");\n        require(totalSupply + amount <= MAX_SUPPLY, \"META: exceeds max supply\");\n        totalSupply += amount;\n        balanceOf[to] += amount;\n        if (!isHolder[to]) {\n            isHolder[to] = true;\n            holders.push(to);\n        }\n        emit Transfer(address(0), to, amount);\n        emit Mint(to, amount, reason);\n    }\n\n    /// @notice 仅用于创世空投与排行榜奖励，总量受 MAX_SUPPLY 硬约束\n    function mint(address to, uint256 amount, string calldata reason) external onlyOwner {\n        _mint(to, amount, reason);\n    }\n\n    function holderCount() external view returns (uint256) {\n        return holders.length;\n    }\n\n    // ---------------------------------------------------------------\n    // 治理投票\n    // ---------------------------------------------------------------\n\n    /// @notice 创建治理提案（如：新地图开放、税率调整、活动规则）\n    function createProposal(string calldata title, uint256 durationSeconds) external returns (uint256) {\n        require(balanceOf[msg.sender] >= eliteThreshold, \"META: below elite threshold\");\n        uint256 id = proposals.length;\n        proposals.push(\n            Proposal({\n                title: title,\n                forVotes: 0,\n                againstVotes: 0,\n                deadline: block.timestamp + durationSeconds,\n                executed: false\n            })\n        );\n        emit ProposalCreated(id, title, block.timestamp + durationSeconds);\n        return id;\n    }\n\n    /// @notice 按持币量加权投票\n    function vote(uint256 id, bool support) external {\n        require(id < proposals.length, \"META: unknown proposal\");\n        Proposal storage p = proposals[id];\n        require(block.timestamp < p.deadline, \"META: voting closed\");\n        require(!hasVoted[id][msg.sender], \"META: already voted\");\n\n        uint256 weight = balanceOf[msg.sender];\n        require(weight > 0, \"META: no voting power\");\n\n        hasVoted[id][msg.sender] = true;\n        if (support) p.forVotes += weight;\n        else p.againstVotes += weight;\n\n        emit Voted(id, msg.sender, support, weight);\n    }\n\n    function proposalCount() external view returns (uint256) {\n        return proposals.length;\n    }\n\n    function getProposal(uint256 id)\n        external\n        view\n        returns (string memory title, uint256 forVotes, uint256 againstVotes, uint256 deadline, bool executed)\n    {\n        require(id < proposals.length, \"META: unknown proposal\");\n        Proposal storage p = proposals[id];\n        return (p.title, p.forVotes, p.againstVotes, p.deadline, p.executed);\n    }\n\n    /// @notice 判断某地址是否达到精英区门槛\n    function isElite(address account) external view returns (bool) {\n        return balanceOf[account] >= eliteThreshold;\n    }\n\n    function setEliteThreshold(uint256 value) external onlyOwner {\n        eliteThreshold = value;\n        emit EliteThresholdUpdated(value);\n    }\n}\n"};</script>
+<script>
+/* ==== contract.js ==== */
+/* =====================================================================
+   合约源码查看器
+   从 contracts/ 目录加载 .sol 源码并做基础语法高亮
+   ===================================================================== */
+'use strict';
+
+const ContractViewer = (() => {
+  const cache = {};
+  let current = 'ArkToken';
+
+  function hl(src) {
+    const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let out = esc(src);
+
+    // 注释（先处理，避免内部关键字被着色）
+    const comments = [];
+    out = out.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, (m) => {
+      comments.push(m);
+      return `\x00C${comments.length - 1}\x00`;
+    });
+
+    // 字符串
+    const strs = [];
+    out = out.replace(/(unicode"[\s\S]*?"|"[^"\n]*")/g, (m) => {
+      strs.push(m);
+      return `\x00S${strs.length - 1}\x00`;
+    });
+
+    // 关键字
+    out = out.replace(
+      /\b(pragma|solidity|contract|interface|library|function|modifier|event|struct|enum|mapping|returns?|public|private|internal|external|pure|view|payable|memory|storage|calldata|constant|immutable|constructor|require|revert|emit|if|else|for|while|return|new|delete|indexed|virtual|override|using|is|this|msg|block|tx|address|uint256|uint8|uint16|uint32|int32|int256|bytes32|bytes|string|bool|true|false|wei|gwei|ether|days|hours)\b/g,
+      (m) => `<span class="k">${m}</span>`
+    );
+
+    // 数字
+    out = out.replace(/\b(\d[\d_]*e?\d*)\b/g, '<span class="n">$1</span>');
+
+    // 还原
+    out = out.replace(/\x00S(\d+)\x00/g, (_, i) => `<span class="s">${strs[i]}</span>`);
+    out = out.replace(/\x00C(\d+)\x00/g, (_, i) => `<span class="c">${comments[i]}</span>`);
+
+    return out;
+  }
+
+  async function load(name) {
+    if (cache[name]) return cache[name];
+    const t = (window.__SOL_SOURCES__ || {})[name];
+    if (!t) throw new Error('未找到合约源码 ' + name);
+    cache[name] = t;
+    return t;
+  }
+
+  async function show(name) {
+    const el = document.getElementById('codeView');
+    if (!el) return;
+    el.innerHTML = '<span class="muted">加载中…</span>';
+    try {
+      const src = await load(name);
+      const lines = src.split('\n');
+      // 带行号渲染
+      const num = (n) => `<span style="color:#2e3f5e;user-select:none;display:inline-block;width:38px;text-align:right;margin-right:14px">${n}</span>`;
+      el.innerHTML = lines
+        .map((l, i) => num(i + 1) + hl(l))
+        .join('\n')
+        .replace(/<span class="/g, '<span class="');
+      current = name;
+    } catch (e) {
+      el.innerHTML = `<span style="color:var(--down)">无法加载源码：${e.message}\n\n请通过本地 HTTP 服务访问本页面（而非直接打开文件）。</span>`;
+    }
+  }
+
+  function bind() {
+    document.querySelectorAll('.chip[data-c]').forEach((c) => {
+      c.onclick = () => {
+        document.querySelectorAll('.chip[data-c]').forEach((x) => x.classList.remove('on'));
+        c.classList.add('on');
+        show(c.dataset.c);
+      };
+    });
+    show('ArkToken');
+  }
+
+  return { bind, show };
+})();
+
+// 样式补充：代码高亮配色
+(function injectCodeStyle() {
+  const st = document.createElement('style');
+  st.textContent = `
+    #codeView .k { color: #c792ea; }
+    #codeView .s { color: #c3e88d; }
+    #codeView .n { color: #f78c6c; }
+    #codeView .c { color: #4a5a78; font-style: italic; }
+  `;
+  document.head.appendChild(st);
+})();
+
+window.addEventListener('DOMContentLoaded', () => {
+  // 等 App 初始化完再绑定
+  setTimeout(ContractViewer.bind, 120);
+});
+
+</script>
+</body>
+</html>
