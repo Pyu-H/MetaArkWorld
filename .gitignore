@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+
+# Hardhat 编译产物与缓存
+artifacts/
+cache/
+typechain-types/
+
+# 本地环境变量（含私钥、RPC，切勿提交）
+.env
+.env.local
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+npm-debug.log*

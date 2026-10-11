@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>元界方舟 MetaArk World — 区块链土地经营模拟</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ 顶部导航 ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">◈</div>
+    <div class="brand-text">
+      <b>元界方舟</b>
+      <span>METAARK WORLD</span>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="on" data-p="world">🗺️ 世界地图</button>
+    <button data-p="economy">📊 经济看板</button>
+    <button data-p="chain">⛓️ 链上浏览器</button>
+    <button data-p="contract">📜 智能合约</button>
+    <button data-p="docs">📖 白皮书</button>
+  </nav>
+  <div class="wallet">
+    <span class="dot"></span>
+    <span class="addr">0x7A3f…9E2c</span>
+    <span class="pill ok" id="wBlock">#18,204,336</span>
+  </div>
+</header>
+
+<!-- ============ 币价条 ============ -->
+<div class="ticker">
+  <div class="tk"><span class="lbl">$ARK</span><span class="val c-ark" id="wArk">0</span><span class="chg up">▲ 2.41%</span></div>
+  <div class="tk"><span class="lbl">$META</span><span class="val c-meta" id="wMeta">0</span><span class="chg down">▼ 0.83%</span></div>
+  <div class="tk"><span class="lbl">ETH</span><span class="val mono" id="wEth">0</span><span class="chg up">▲ 1.12%</span></div>
+  <div class="tk"><span class="lbl">Gas</span><span class="val">12 Gwei</span></div>
+  <div class="tk"><span class="lbl">网络</span><span class="val c-meta">MetaArk Local · 31337</span></div>
+  <div class="tk"><span class="lbl">出块</span><span class="val">~3.2s</span></div>
+  <div class="tk"><span class="lbl">TPS</span><span class="val" id="wTps">24</span></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ==================== 页 1：世界地图 ==================== -->
+  <section class="page on" id="page-world">
+
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">$ARK 流通量</div><div class="v c-ark" id="statArk">0</div><div class="d">年通胀上限 3%</div></div>
+      <div class="stat"><div class="k">累计燃烧</div><div class="v" style="color:var(--burn)" id="statBurned">0</div><div class="d">建造 5% + 交易税 3%</div></div>
+      <div class="stat"><div class="k">已铸造地块</div><div class="v" id="statLands">0</div><div class="d">硬顶 4096 · 按活跃度解锁</div></div>
+      <div class="stat"><div class="k">全服日产出</div><div class="v" style="color:var(--up)" id="statYield">0</div><div class="d">ARK / 日</div></div>
+    </div>
+
+    <div class="grid g-map">
+      <!-- 地图 -->
+      <div>
+        <div class="map-shell">
+          <canvas id="mapCanvas"></canvas>
+          <div class="map-tools">
+            <button class="chip on" data-f="all">全部</button>
+            <button class="chip" data-f="free">未铸造</button>
+            <button class="chip" data-f="mine">我的土地</button>
+            <button class="chip" data-f="rent">可租赁</button>
+            <button class="chip" data-f="listed">挂售中</button>
+            <button class="chip" id="heatToggle">🔥 人气热力</button>
+          </div>
+          <div class="legend">
+            <span><i style="background:#4a7c59"></i>大陆</span>
+            <span><i style="background:#2b6cb0"></i>海域</span>
+            <span><i style="background:#7c5cbf"></i>空岛</span>
+            <span><i style="background:#ffb020"></i>我的地</span>
+            <span><i style="background:#3ddc97"></i>他人地</span>
+            <span><i style="background:#6c8cff"></i>出租中</span>
+            <span><i style="background:#26d0ce"></i>挂售中</span>
+          </div>
+        </div>
+
+        <!-- 我的资产 -->
+        <div class="grid g-2 mt14">
+          <div class="card">
+            <div class="card-h"><h3>🏠 我的资产</h3><span class="sub" id="myLands">0 块地</span></div>
+            <div class="card-b tight" id="holdings"></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><h3>📈 我的收益</h3><span class="sub">实时结算</span></div>
+            <div class="card-b">
+              <div class="kv"><span class="k">$ARK 余额</span><span class="v c-ark" id="myArk">0</span></div>
+              <div class="kv"><span class="k">$META 余额</span><span class="v c-meta" id="myMeta">0</span></div>
+              <div class="kv"><span class="k">持有地块</span><span class="v" id="myLands2">0</span></div>
+              <div class="kv"><span class="k">日产出合计</span><span class="v" style="color:var(--up)" id="myYield">0</span></div>
+              <div class="kv"><span class="k">累计协议抽成</span><span class="v" id="protoFee">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：地块详情 + 交易流水 -->
+      <div>
+        <div class="card mb14">
+          <div id="landDetail"></div>
+        </div>
+        <div class="card">
+          <div class="card-h">
+            <h3>⚡ 实时交易流水</h3>
+            <span class="sub">链上确认</span>
+          </div>
+          <div class="card-b tight" id="txFeed" style="max-height:420px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 2：经济看板 ==================== -->
+  <section class="page" id="page-economy">
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">$ARK 流通量</div><div class="v c-ark" id="statArk2">0</div><div class="d">效用币 · 通胀受控</div></div>
+      <div class="stat"><div class="k">$META 供应量</div><div class="v c-meta" id="statMeta">0</div><div class="d">治理币 · 硬顶 1 亿</div></div>
+      <div class="stat"><div class="k">燃烧率</div><div class="v" style="color:var(--burn)" id="burnRate">0%</div><div class="d">累计销毁 / 曾发行</div></div>
+      <div class="stat"><div class="k">建筑总数</div><div class="v" id="statBuilt">0</div><div class="d">全服建造量</div></div>
+    </div>
+
+    <div class="grid g-map mb14">
+      <div class="card">
+        <div class="card-h">
+          <h3>双币供应量与通缩曲线</h3>
+          <span class="sub">近 28 个周期</span>
+        </div>
+        <div class="card-b"><canvas id="econChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>产业分布</h3><span class="sub">按建筑类型</span></div>
+        <div class="card-b" id="sectors"></div>
+      </div>
+    </div>
+
+    <div class="grid g-3">
+      <div class="card">
+        <div class="card-h"><h3>💧 流动性池与燃烧</h3></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">协议抽成累计</span><span class="v" id="protoFee2">0</span></div>
+          <div class="kv"><span class="k">租赁成交总额</span><span class="v" id="rentVol">0</span></div>
+          <div class="kv"><span class="k">土地成交总额</span><span class="v" id="tradeVol">0</span></div>
+          <div class="kv"><span class="k">当前税率</span><span class="v">3.0%</span></div>
+          <div class="kv"><span class="k">房东分成</span><span class="v" style="color:var(--up)">90%</span></div>
+          <div class="kv"><span class="k">协议分成</span><span class="v" style="color:var(--ark)">10%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>🌊 增发与通胀控制</h3><span class="sub">Minter 额度</span></div>
+        <div class="card-b" id="minterList"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>🛡️ 防崩盘机制</h3></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">地块解锁规则</span><span class="v">每 100 活跃玩家 +10 格</span></div>
+          <div class="kv"><span class="k">地块硬顶</span><span class="v">4,096</span></div>
+          <div class="kv"><span class="k">建筑维护费</span><span class="v">20 × 等级 ARK</span></div>
+          <div class="kv"><span class="k">衰败宽限期</span><span class="v">7 天</span></div>
+          <div class="kv"><span class="k">衰减速率</span><span class="v">每 7 天 -25%</span></div>
+          <div class="kv"><span class="k">材料半衰期</span><span class="v">随全服产出衰减</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 3：链上浏览器 ==================== -->
+  <section class="page" id="page-chain">
+    <div class="grid g-2">
+      <div class="card">
+        <div class="card-h"><h3>📦 最新区块</h3><span class="sub">MetaArk Local Chain</span></div>
+        <div style="max-height:620px;overflow-y:auto">
+          <table>
+            <thead><tr><th>高度</th><th>哈希</th><th>交易</th><th>Gas Used</th><th>大小</th><th>时间</th></tr></thead>
+            <tbody id="blockList"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>◈ 事件日志</h3><span class="sub">Contract Events</span></div>
+        <div class="card-b tight" id="logList" style="max-height:620px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 4：智能合约 ==================== -->
+  <section class="page" id="page-contract">
+    <div class="grid g-4 mb14">
+      <div class="stat"><div class="k">合约数量</div><div class="v">5</div><div class="d">零外部依赖手写实现</div></div>
+      <div class="stat"><div class="k">代码行数</div><div class="v">1,460</div><div class="d">Solidity 0.8.26</div></div>
+      <div class="stat"><div class="k">测试用例</div><div class="v" style="color:var(--up)">99 / 99</div><div class="d">全部通过 · 真实 EVM</div></div>
+      <div class="stat"><div class="k">公开函数</div><div class="v">148</div><div class="d">40 个事件</div></div>
+    </div>
+
+    <div class="grid g-2 mb14">
+      <div class="card">
+        <div class="card-h"><h3>✅ 测试结果</h3><span class="sub">Hardhat EVM 真实执行</span></div>
+        <div class="card-b">
+          <div class="kv"><span class="k">合约部署与初始化</span><span class="v" style="color:var(--up)">9 通过</span></div>
+          <div class="kv"><span class="k">$ARK 分发与通胀上限</span><span class="v" style="color:var(--up)">7 通过</span></div>
+          <div class="kv"><span class="k">土地铸造与地形加成</span><span class="v" style="color:var(--up)">12 通过</span></div>
+          <div class="kv"><span class="k">建造与 5% 焚烧</span><span class="v" style="color:var(--up)">10 通过</span></div>
+          <div class="kv"><span class="k">升级与产出衰减</span><span class="v" style="color:var(--up)">7 通过</span></div>
+          <div class="kv"><span class="k">材料生产与合成</span><span class="v" style="color:var(--up)">6 通过</span></div>
+          <div class="kv"><span class="k">土地交易与 3% 税</span><span class="v" style="color:var(--up)">11 通过</span></div>
+          <div class="kv"><span class="k">核心闭环：挂租→消费→提现</span><span class="v" style="color:var(--up)">16 通过</span></div>
+          <div class="kv"><span class="k">$META 治理投票</span><span class="v" style="color:var(--up)">9 通过</span></div>
+          <div class="kv"><span class="k">防崩盘机制</span><span class="v" style="color:var(--up)">12 通过</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>📐 合约架构</h3><span class="sub">依赖关系</span></div>
+        <div class="card-b">
+          <pre style="max-height:520px;border:none;padding:0;background:transparent">
+┌─────────────────────────────────────────┐
+│           LandNFT (ERC-721)             │
+│  坐标 · 地形 · 人气 · 槽位 · 租赁配置    │
+└────────┬────────────────────┬───────────┘
+         │ consumeSlot        │ assignRenter
+         │ adjustPopularity   │ marketTransfer
+         ▼                    ▼
+┌──────────────────┐  ┌──────────────────┐
+│  BuildingNFT     │  │   LandMarket     │
+│  (ERC-1155)      │  │  买卖 · 租赁托管  │
+│  建造/升级/衰败   │  │  90/10 自动分账   │
+└────────┬─────────┘  └────────┬─────────┘
+         │ burnFrom            │ transferFrom
+         ▼                     ▼
+┌─────────────────────────────────────────┐
+│           ArkToken ($ARK)               │
+│  通胀上限 3% · 焚烧 · Minter 白名单      │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│          MetaToken ($META)              │
+│  硬顶 1 亿 · 加权投票 · 精英区门槛       │
+└─────────────────────────────────────────┘</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h3>📄 合约源码</h3>
+        <div class="flex" style="gap:6px">
+          <button class="chip on" data-c="ArkToken">ArkToken</button>
+          <button class="chip" data-c="MetaToken">MetaToken</button>
+          <button class="chip" data-c="LandNFT">LandNFT</button>
+          <button class="chip" data-c="BuildingNFT">BuildingNFT</button>
+          <button class="chip" data-c="LandMarket">LandMarket</button>
+        </div>
+      </div>
+      <div class="card-b">
+        <pre id="codeView">加载中…</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 页 5：白皮书 ==================== -->
+  <section class="page" id="page-docs">
+    <div class="card mb14">
+      <div class="card-h"><h3>📖 元界方舟 · 项目白皮书</h3><span class="sub">v1.0</span></div>
+      <div class="card-b" style="line-height:1.85">
+
+        <h3 style="margin-bottom:10px;color:var(--ark)">一、项目定位</h3>
+        <p style="color:var(--txt-1);margin-bottom:20px">
+          元界方舟（MetaArk World）是区块链版「我的世界 + 模拟城市」。玩家拥有土地、建造空间、经营生态、
+          社交交易，所有核心资产上链。与纯打怪型 GameFi 不同，本项目以<b>经济体经营</b>为核心乐趣：
+          土地是产权、建筑是产能、玩家之间的租赁与交易构成真实的经济循环。
+        </p>
+
+        <h3 style="margin-bottom:10px;color:var(--ark)">二、核心玩法闭环</h3>
+        <p style="color:var(--txt-1);margin-bottom:14px">
+          已完成 MVP 的可展示闭环：<b>买地 → 盖店 → 挂租 → 别人来消费 → 提现代币</b>。
+          这条链路已在 99 个真实 EVM 测试用例中完整跑通，包括 90/10 分账的精确性验证。
+        </p>
+        <div class="grid g-2" style="margin-bottom:20px">
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">土地占领</b><br>
+            <span style="color:var(--txt-1)">地图分大陆/海域/空岛，通过竞拍或新手任务领取创世地块（ERC-721）</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">自由建造</b><br>
+            <span style="color:var(--txt-1)">放置建筑 NFT（工坊/商店/乐园），改变地块人气、产出与租金</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">生产经营</b><br>
+            <span style="color:var(--txt-1)">形成「原料 → 制造 → 零售」链条，木材+矿石可合成能量核</span>
+          </div>
+          <div style="padding:13px;background:var(--bg-2);border-radius:8px;font-size:13px">
+            <b style="color:var(--ark)">治理共建</b><br>
+            <span style="color:var(--txt-1)">持 $META 可对地图开放、税率、活动规则投票</span>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:10px;color:var(--meta)">三、双币经济模型</h3>
+        <table style="margin-bottom:20px">
+          <thead><tr><th>维度</th><th>$ARK 效用币</th><th>$META 治理币</th></tr></thead>
+          <tbody>
+            <tr><td>总量</td><td>无限但控产出（年通胀 ≤3%）</td><td>固定 1 亿，永不增发</td></tr>
+            <tr><td>获取</td><td>生产、任务、出租、活动</td><td>创世空投、土地分红、排行榜</td></tr>
+            <tr><td>消耗</td><td>建造、升级、维修、买材料</td><td>买稀有地、投票、进精英区</td></tr>
+            <tr><td>通缩</td><td>建造焚烧 5%、交易税 3%</td><td>天然通缩（总量固定）</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-bottom:10px;color:var(--burn)">四、燃烧闭环（已上链验证）</h3>
+        <div class="grid g-3" style="margin-bottom:20px">
+          <div class="stat"><div class="k">建造焚烧</div><div class="v" style="color:var(--burn)">5%</div><div class="d">实测：700 ARK → 焚 35 ARK</div></div>
+          <div class="stat"><div class="k">交易税</div><div class="v" style="color:var(--burn)">3%</div><div class="d">实测：5000 ARK → 税 150 ARK</div></div>
+          <div class="stat"><div class="k">租赁分成</div><div class="v" style="color:var(--up)">90/10</div><div class="d">实测零误差分账</div></div>
+        </div>
+
+        <h3 style="margin-bottom:10px;color:var(--up)">五、防崩盘四道闸</h3>
+        <ol style="color:var(--txt-1);padding-left:20px;margin-bottom:20px">
+          <li style="margin-bottom:7px"><b>土地不无限发</b>：硬顶 4096 格，新地块按活跃玩家数解锁（100 活跃 → 10 格）</li>
+          <li style="margin-bottom:7px"><b>建筑需维护</b>：7 天宽限期后每 7 天衰减 25%，长期不经营会衰败至零产出</li>
+          <li style="margin-bottom:7px"><b>产出半衰期</b>：材料产出随全服总量衰减，通胀年上限 3% 硬约束</li>
+          <li><b>通缩对冲</b>：建造 5% + 交易 3% + 租赁 10% 持续焚烧，形成买盘压力</li>
+        </ol>
+
+        <h3 style="margin-bottom:10px;color:var(--txt-0)">六、技术实现</h3>
+        <table>
+          <thead><tr><th>层次</th><th>技术选型</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr><td>智能合约</td><td>Solidity 0.8.26 · 手写 ERC-721/1155/20</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>测试</td><td>Hardhat EVM · 99 用例</td><td><span class="pill ok">99/99 通过</span></td></tr>
+            <tr><td>前端</td><td>Canvas 像素引擎 + 链模拟器</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>钱包</td><td>内置模拟钱包（可接 MetaMask）</td><td><span class="pill ok">已完成</span></td></tr>
+            <tr><td>元数据</td><td>链下 IPFS / 对象存储</td><td><span class="pill info">方案就绪</span></td></tr>
+            <tr><td>后端</td><td>节点服务 + 游戏状态机</td><td><span class="pill info">方案就绪</span></td></tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ 模态 ============ -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="modal-h">
+      <h3 id="mTitle">标题</h3>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="modal-b" id="mBody"></div>
+    <div class="modal-f" id="mFoot"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="chain.js"></script>
+<script src="world.js"></script>
+<script src="renderer.js"></script>
+<script src="app.js"></script>
+<script src="contract.js"></script>
+</body>
+</html>
